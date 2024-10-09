@@ -83,22 +83,24 @@ jobs:
 
       - name: Copy docker-compose.production.yml via SSH
         uses: appleboy/scp-action@master
+        env:
+           HOST: ${{ secrets.HOST }}
+           USERNAME: ${{ secrets.USER }}
+           KEY: ${{ secrets.SSH_KEY }}
+           PASSPHRASE: ${{ secrets.SSH_PASSPHRASE }}
         with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USER }}
-          key: ${{ secrets.SSH_KEY }}
-          passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          source: "/foodgram/docker-compose.production.yml"
-          target: "~/foodgram/"
+          source: "docker-compose.production.yml"
+          target: "home/foodgram/"
           overwrite: true
 
       - name: Project deploy and start
         uses: appleboy/ssh-action@master
+        env:
+          HOST: ${{ secrets.HOST }}
+          USERNAME: ${{ secrets.USER }}
+          KEY: ${{ secrets.SSH_KEY }}
+          PASSPHRASE: ${{ secrets.SSH_PASSPHRASE }}
         with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USER }}
-          key: ${{ secrets.SSH_KEY }}
-          passphrase: ${{ secrets.SSH_PASSPHRASE }}
           script: |
             cd foodgram
             sudo docker compose -f docker-compose.production.yml pull
@@ -116,9 +118,10 @@ jobs:
     steps:
       - name: Send Telegram Message
         uses: appleboy/telegram-action@master
+        env:
+          TO: ${{ secrets.TELEGRAM_TO }}
+          TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
         with:
-          to: ${{ secrets.TELEGRAM_TO }}
-          token: ${{ secrets.TELEGRAM_TOKEN }}
           message: |
             Деплой проекта foodgram-vismar был выполнен успешно.
             Ссылка на последний коммит: https://github.com/${{ github.repository }}/commit/${{github.sha}}
