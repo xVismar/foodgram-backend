@@ -89,7 +89,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           source: "docker-compose.production.yml"
-          target: "home/foodgram/"
+          target: "foodgram"
           overwrite: true
 
       - name: Project deploy and start
