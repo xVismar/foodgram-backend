@@ -15,24 +15,31 @@ services:
       - "5432:5432"
 
   backend:
-    build: ./backend/
+    container_name: foodgram-back
     env_file: .env
+    build: /backend/
     volumes:
-      - media:/media/
+      - media:/app/media/
       - static:/backend_static/
 
   frontend:
+    container_name: foodgram-front
     env_file: .env
-    build: ./frontend/
+    build: /frontend/
     command: cp -r /app/build/. /frontend_static/
     volumes:
-      - static:/static/
+      - static:/app/build/
 
   gateway:
-    build: ./nginx/
+    container_name: foodgram-proxy
+    build: /nginx/
     env_file: .env
     ports:
-      - 8080:80
+      - "8080:80"
     volumes:
-      - static:/static/
-      - media:/media/
+      - media:/media
+      - static:/static
+    depends_on:
+      - backend
+      - frontend
+
