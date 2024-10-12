@@ -1,7 +1,7 @@
 version: '3'
 
 volumes:
-  pg_data:
+  foodgram_data:
   static:
   media:
 
@@ -10,32 +10,35 @@ services:
     image: postgres:13.10
     env_file: .env
     volumes:
-      - pg_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+      - foodgram_data:/var/lib/postgresql/data
+    external:
+      - true
+    restart:
+      - always
 
   backend:
     image: vismar/foodgram_backend
     env_file: .env
     volumes:
-      - static:/backend_static/
-      - media:/app/media/
+      - static:/backend_static
+      - media:/app/media
+
     depends_on:
       - db
 
   frontend:
     image: vismar/foodgram_frontend
     env_file: .env
-    command: cp -r /app/build/. /frontend_static/
+    command: cp -r /app/build/. /static/
     volumes:
-      - static:/frontend_static
+      - static:/static
 
   gateway:
     image: vismar/foodgram_gateway
     env_file: .env
     volumes:
-      - static:/staticfiles/
-      - media:/media/
+      - static:/static/
+      - media:/app/media
     ports:
       - 8080:80
     depends_on:

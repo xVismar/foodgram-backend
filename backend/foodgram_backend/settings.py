@@ -131,10 +131,12 @@ REST_FRAMEWORK = {
 }
 
 DJOSER = {
-    "TOKEN_MODEL": "rest_framework.authtoken.models.Token",
-    "PERMISSIONS": {
-        "user": ["rest_framework.permissions.AllowAny"],
-        "user_list": ["rest_framework.permissions.AllowAny"],
+    'LOGIN_FIELD': 'email',
+    'HIDE_USERS': False,
+    'TOKEN_MODEL': 'rest_framework.authtoken.models.Token',
+    'PERMISSIONS': {
+        'user': ['rest_framework.permissions.AllowAny'],
+        'user_list': ['rest_framework.permissions.AllowAny'],
     },
 }
 
