@@ -1,3 +1,5 @@
+import os
+
 from django.db.models import Exists, OuterRef, Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -6,8 +8,6 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from weasyprint import HTML
-
 
 from api.filters import RecipeFilter
 from api.pagination import CustomPagination
@@ -159,24 +159,21 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
             .annotate(total_amount=Sum('amount'))
             .order_by('ingredient__name')
         )
-        html_template = (
-            "<h1>Список ингредиентов для приготовления:</h1>"
-            "<ol>"
-            "{% for item in ingredients %}"
-            "    <li>{{ forloop.counter }}. {{ item.ingredient__name }} "
-            "        ({{ item.ingredient__measurement_unit }}) - "
-            "        {{ item.total_amount }}</li>"
-            "{% endfor %}"
-            "</ol>"
-        )
-        html_context = {'ingredients': ingredients_sum}
-        response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = (
-            'attachment; filename="shopping_cart.pdf"'
-        )
-        HTML(string=html_template, context=html_context).write_pdf(
-            response, stylesheets=[]
-        )
+        file_path = f'shopping_cart_{user.username}.txt'
+        with open(file_path, 'w') as file:
+            file.write('Список ингредиентов для приготовления:\n\n')
+            for index, item in enumerate(ingredients_sum, start=1):
+                line = (
+                    f'{index}. {item["ingredient__name"]} '
+                    f'({item["ingredient__measurement_unit"]}) - '
+                    f'{item["total_amount"]}\n'
+                )
+                file.write(line)
+        response = HttpResponse(content_type='text/plain')
+        response['Content-Disposition'] = f'attachment; filename="{file_path}"'
+        with open(file_path, 'rb') as file:
+            response.write(file.read())
+        os.remove(file_path)
         return response
 
     @action(
