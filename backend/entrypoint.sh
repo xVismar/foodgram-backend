@@ -5,4 +5,4 @@ python manage.py first_time_setup
 
 cp -r /app/collected_static/. /backend_static/static/
 
-gunicorn --bind 0:8080 foodgram_backend.wsgi
+gunicorn --bind 0.0.0.0:8080 foodgram_backend.wsgi
