@@ -174,7 +174,9 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
         response['Content-Disposition'] = (
             'attachment; filename="shopping_cart.pdf"'
         )
-        HTML(string=html_template).write_pdf(response, stylesheets=[])
+        HTML(string=html_template, context=html_context).write_pdf(
+            response, stylesheets=[]
+        )
         return response
 
     @action(
