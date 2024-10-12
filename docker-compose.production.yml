@@ -11,8 +11,6 @@ services:
     env_file: .env
     volumes:
       - foodgram_data:/var/lib/postgresql/data
-    external:
-      - true
 
   backend:
     image: vismar/foodgram_backend
