@@ -1,8 +1,11 @@
-import os
 
+from datetime import datetime
+
+from django.core.files.base import ContentFile
 from django.db.models import Exists, OuterRef, Sum
-from django.http import HttpResponse
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect
+from django.utils.encoding import smart_bytes
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -38,6 +41,23 @@ class CustomHandleMixin:
             serializer = RecipeMiniSerializer(recipe)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+def shopping_cart_list(ingredients, cart):
+    today = datetime.now().strftime('%d-%m-%Y')
+    ingredients_info = [
+        f"{i}. {ingredient['ingredient__name'].capitalize()} "
+        f"({ingredient['ingredient__measurement_unit']}) — "
+        f"{ingredient['total_amount']}"
+        for i, ingredient in enumerate(ingredients, start=1)
+    ]
+    recipes = [recipe.name for recipe in cart]
+    return '\n'.join([
+        f'Дата составления списка покупок: {today}',
+        f'Для приготовления следующих рецептов: {recipes}'
+        'Вам потрубется купить продуктов:'
+        f'{ingredients_info}'
+    ])
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -114,38 +134,10 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
     def shopping_cart(self, request, pk=None):
         return self.custom_add_remove_handle(request, pk, ShoppingCart)
 
-    # @action(
-    #     detail=False,
-    #     methods=['GET'],
-    #     url_path='download_shopping_cart',
-    # )
-    # def download_shopping_cart(self, request):
-    #     user = request.user
-    #     response = HttpResponse(content_type='text/plain')
-    #     shopping_cart = ShoppingCart.objects.filter(user=user).values_list(
-    #         'recipe', flat=True
-    #     )
-    #     ingredients_sum = (
-    #         RecipeIngredient.objects.filter(recipe__in=shopping_cart)
-    #         .values('ingredient__name', 'ingredient__measurement_unit')
-    #         .annotate(total_amount=Sum('amount'))
-    #         .order_by('ingredient__name')
-    #     )
-    #     response.write(
-    #         'Список ингредиентов для приготовления:\n\n'.encode('utf-8')
-    #     )
-    #     for index, item in enumerate(ingredients_sum, start=1):
-    #         line = (
-    #             f'{index}. {item["ingredient__name"]} '
-    #             f'({item["ingredient__measurement_unit"]}) - '
-    #             f'{item["total_amount"]}\n'
-    #         )
-    #         response.write(line.encode('utf-8'))
-    #     return response
-
     @action(
         detail=False,
         methods=['GET'],
+        permission_classes=[IsAuthenticated],
         url_path='download_shopping_cart'
     )
     def download_shopping_cart(self, request):
@@ -159,22 +151,15 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
             .annotate(total_amount=Sum('amount'))
             .order_by('ingredient__name')
         )
-        file_path = f'shopping_cart_{user.username}.txt'
-        with open(file_path, 'w') as file:
-            file.write('Список ингредиентов для приготовления:\n\n')
-            for index, item in enumerate(ingredients_sum, start=1):
-                line = (
-                    f'{index}. {item["ingredient__name"]} '
-                    f'({item["ingredient__measurement_unit"]}) - '
-                    f'{item["total_amount"]}\n'
-                )
-                file.write(line)
-        response = HttpResponse(content_type='text/plain')
-        response['Content-Disposition'] = f'attachment; filename="{file_path}"'
-        with open(file_path, 'rb') as file:
-            response.write(file.read())
-        os.remove(file_path)
-        return response
+        shopping_list = smart_bytes(
+            shopping_cart_list(ingredients_sum, shopping_cart)
+        )
+        return FileResponse(
+            ContentFile(shopping_list),
+            as_attachment=True,
+            filename='shopping_list.txt',
+            content_type='text/plain; charset=utf-8'
+        )
 
     @action(
         detail=True,
