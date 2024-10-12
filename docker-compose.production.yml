@@ -13,8 +13,6 @@ services:
       - foodgram_data:/var/lib/postgresql/data
     external:
       - true
-    restart:
-      - always
 
   backend:
     image: vismar/foodgram_backend
