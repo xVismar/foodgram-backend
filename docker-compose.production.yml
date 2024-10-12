@@ -26,14 +26,14 @@ services:
     env_file: .env
     command: cp -r /app/build/. /frontend_static/
     volumes:
-      - static:/static
+      - static:/frontend_static
 
   gateway:
     image: vismar/foodgram_gateway
-    env_file: .env
     volumes:
-      - static:/staticfiles/
-      - media:/media/
+      - static:/static/
+      - media:/app/media
+      - ./docs/:/usr/share/nginx/html/api/docs/
     ports:
       - 8080:80
     depends_on:
