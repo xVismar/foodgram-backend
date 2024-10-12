@@ -6,6 +6,8 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from weasyprint import HTML
+
 
 from api.filters import RecipeFilter
 from api.pagination import CustomPagination
@@ -112,14 +114,42 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
     def shopping_cart(self, request, pk=None):
         return self.custom_add_remove_handle(request, pk, ShoppingCart)
 
+    # @action(
+    #     detail=False,
+    #     methods=['GET'],
+    #     url_path='download_shopping_cart',
+    # )
+    # def download_shopping_cart(self, request):
+    #     user = request.user
+    #     response = HttpResponse(content_type='text/plain')
+    #     shopping_cart = ShoppingCart.objects.filter(user=user).values_list(
+    #         'recipe', flat=True
+    #     )
+    #     ingredients_sum = (
+    #         RecipeIngredient.objects.filter(recipe__in=shopping_cart)
+    #         .values('ingredient__name', 'ingredient__measurement_unit')
+    #         .annotate(total_amount=Sum('amount'))
+    #         .order_by('ingredient__name')
+    #     )
+    #     response.write(
+    #         'Список ингредиентов для приготовления:\n\n'.encode('utf-8')
+    #     )
+    #     for index, item in enumerate(ingredients_sum, start=1):
+    #         line = (
+    #             f'{index}. {item["ingredient__name"]} '
+    #             f'({item["ingredient__measurement_unit"]}) - '
+    #             f'{item["total_amount"]}\n'
+    #         )
+    #         response.write(line.encode('utf-8'))
+    #     return response
+
     @action(
         detail=False,
         methods=['GET'],
-        url_path='download_shopping_cart',
+        url_path='download_shopping_cart'
     )
     def download_shopping_cart(self, request):
         user = request.user
-        response = HttpResponse(content_type='text/plain')
         shopping_cart = ShoppingCart.objects.filter(user=user).values_list(
             'recipe', flat=True
         )
@@ -129,16 +159,22 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
             .annotate(total_amount=Sum('amount'))
             .order_by('ingredient__name')
         )
-        response.write(
-            'Список ингредиентов для приготовления:\n\n'.encode('utf-8')
+        html_template = (
+            "<h1>Список ингредиентов для приготовления:</h1>"
+            "<ol>"
+            "{% for item in ingredients %}"
+            "    <li>{{ forloop.counter }}. {{ item.ingredient__name }} "
+            "        ({{ item.ingredient__measurement_unit }}) - "
+            "        {{ item.total_amount }}</li>"
+            "{% endfor %}"
+            "</ol>"
         )
-        for index, item in enumerate(ingredients_sum, start=1):
-            line = (
-                f'{index}. {item["ingredient__name"]} '
-                f'({item["ingredient__measurement_unit"]}) - '
-                f'{item["total_amount"]}\n'
-            )
-            response.write(line.encode('utf-8'))
+        html_context = {'ingredients': ingredients_sum}
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = (
+            'attachment; filename="shopping_cart.pdf"'
+        )
+        HTML(string=html_template).write_pdf(response, stylesheets=[])
         return response
 
     @action(
