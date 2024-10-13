@@ -53,7 +53,7 @@ def shopping_cart_list(ingredients, cart):
     return '\n'.join([
         f'Дата составления списка покупок: {today}',
         f'Для приготовления следующих рецептов: {recipes}'
-        'Вам потрубется купить продуктов:'
+        'Вам потребуется купить продуктов:'
         f'{ingredients_info}'
     ])
 
