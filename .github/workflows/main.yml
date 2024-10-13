@@ -154,28 +154,28 @@ jobs:
             sudo docker compose -f docker-compose.production.yml pull
             sudo docker compose -f docker-compose.production.yml up -d
 
-send_message:
-  if: github.ref == 'refs/heads/main'
-  runs-on: ubuntu-latest
-  needs:
-    - check_docker_changes
-    - build_and_push_images
-  steps:
-    - name: Send Telegram Message
-      uses: appleboy/telegram-action@master
-      with:
-        to: ${{ secrets.TELEGRAM_TO }}
-        token: ${{ secrets.TELEGRAM_TOKEN }}
-        message: |
-          Деплой проекта foodgram-vismar был выполнен успешно.
-          Ссылка на последний коммит: https://github.com/${{ github.repository }}/commit/${{github.sha}}
-          Автор коммита: ${{ github.actor }}
-          Сообщение коммита: ${{ github.event.commits[0].message }}
-          {% if needs.check_docker_changes.outputs.code_changes == 'true' %}
-          Изменения в коде:
-          - Код: ${{ needs.check_docker_changes.outputs.code_changes }}
-          {% endif %}
-          {% if needs.check_docker_changes.outputs.dockerfile_changes == 'true' %}
-          Изменения в Dockerfile:
-          - Dockerfile: ${{ needs.check_docker_changes.outputs.dockerfile_changes }}
-          {% endif %}
+  send_message:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs:
+      - check_docker_changes
+      - build_and_push_images
+    steps:
+      - name: Send Telegram Message
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          message: |
+            Деплой проекта foodgram-vismar был выполнен успешно.
+            Ссылка на последний коммит: https://github.com/${{ github.repository }}/commit/${{github.sha}}
+            Автор коммита: ${{ github.actor }}
+            Сообщение коммита: ${{ github.event.commits[0].message }}
+            {% if needs.check_docker_changes.outputs.code_changes == 'true' %}
+            Изменения в коде:
+            - Код: ${{ needs.check_docker_changes.outputs.code_changes }}
+            {% endif %}
+            {% if needs.check_docker_changes.outputs.dockerfile_changes == 'true' %}
+            Изменения в Dockerfile:
+            - Dockerfile: ${{ needs.check_docker_changes.outputs.dockerfile_changes }}
+            {% endif %}
