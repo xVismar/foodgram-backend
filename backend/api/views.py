@@ -153,9 +153,9 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
     )
     def download_shopping_cart(self, request):
         user = request.user
-        shopping_cart = ShoppingCart.objects.filter(user=user).values_list(
-            'recipe', flat=True
-        )
+        shopping_cart = ShoppingCart.objects.filter(
+            user=user
+        ).select_related('recipe').values('recipe')
         ingredients_sum = (
             RecipeIngredient.objects.filter(recipe__in=shopping_cart)
             .values('ingredient__name', 'ingredient__measurement_unit')
