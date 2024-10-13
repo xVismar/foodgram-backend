@@ -16,7 +16,7 @@ recipes_data = {
             {"id": 1081, "amount": 220}
         ],
         "tags": [25, 2, 31],
-        "image": "media/recipes/recipe_one.jpg",
+        "image": "/recipes/recipe_one.jpg",
         "name": "Оладушки, которые не опадают",
         "text": (
             "Важны 3 фактора:\n"
@@ -58,7 +58,7 @@ recipes_data = {
             {"id": 1724, "amount": 40}
         ],
         "tags": [66, 28, 21, 2],
-        "image": "media/recipes/recipe_two.jpg",
+        "image": "/recipes/recipe_two.jpg",
         "name": "Постные котлеты",
         "text": (
             "Капусту разрежьте на 4 части и приварите в подсоленной воде минут"
@@ -93,7 +93,7 @@ recipes_data = {
             {"id": 1646, "amount": 25}
         ],
         "tags": [3, 28, 71],
-        "image": "media/recipes/recipe_three.jpg",
+        "image": "/recipes/recipe_three.jpg",
         "name": (
             "Пирожки-минутка, жареные с луком и яйцом, быстрое заварное тесто"
         ),
