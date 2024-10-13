@@ -174,8 +174,6 @@ class UserAdmin(UserAdmin):
     get_subscriptions.admin_order_field = 'author__username'
     get_subscriptions.description = 'Показывает подписки пользователя'
 
-
-
     def get_recipes(self, obj):
         recipe_ct = ContentType.objects.get_for_model(Recipe)
         app_label = recipe_ct.app_label

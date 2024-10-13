@@ -52,7 +52,6 @@ class CustomUserSerializer(BaseCustomUserSerializer):
         return super().update(instance, validated_data)
 
 
-
 class CustomUserSetPasswordSerializer(serializers.Serializer):
     current_password = serializers.CharField(required=True)
     new_password = serializers.CharField(
