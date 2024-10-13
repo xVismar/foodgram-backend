@@ -21,6 +21,7 @@ class Tag(models.Model):
     )
 
     class Meta:
+        ordering = ('name',)
         verbose_name = 'Тег'
         verbose_name_plural = 'Теги'
 
@@ -39,6 +40,7 @@ class Ingredient(models.Model):
     )
 
     class Meta:
+        ordering = ('name',)
         verbose_name = 'Ингредиент'
         verbose_name_plural = 'Ингредиенты'
 
@@ -105,7 +107,7 @@ class Recipe(models.Model):
 
     def get_or_create_short_link(self):
         if not self.short_link:
-            self.short_link = shortuuid.uuid()[:8]
+            self.short_link = shortuuid.uuid()[:10]
             self.save(update_fields=['short_link'])
         return self.short_link
 
@@ -116,7 +118,6 @@ class RecipeIngredient(models.Model):
         on_delete=models.CASCADE,
 
         verbose_name='Рецепт'
-
     )
     ingredient = models.ForeignKey(
         Ingredient,
@@ -156,7 +157,6 @@ class ShoppingCart(models.Model):
         related_name='shoping_cart',
         verbose_name='Пользователь',
     )
-
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,

@@ -14,12 +14,11 @@ class Command(BaseCommand):
     base_dir = Path.cwd()
     source_dir = base_dir / 'data' / 'media_data'
     destination_dir = base_dir / 'media'
-    folders_to_copy = ['recipes']
-    for folder in folders_to_copy:
-        src_folder = source_dir / folder
-        dest_folder = destination_dir / folder
-        shutil.copytree(src_folder, dest_folder, dirs_exist_ok=True)
-    print('Данные из backend/data успешно скопированы в backend/media/')
+    folder_to_copy = 'recipes'
+    src_folder = source_dir / folder_to_copy
+    dest_folder = destination_dir / folder_to_copy
+    shutil.copytree(src_folder, dest_folder, dirs_exist_ok=True)
+    print(f'Папка {folder_to_copy} успешно скопирована в backend/media/')
 
     def handle(self, *args, **kwargs):
         commands = [

@@ -24,11 +24,11 @@ class CustomUserCreateSerializer(UserCreateSerializer):
 class BaseCustomUserSerializer(UserSerializer):
     is_subscribed = serializers.SerializerMethodField()
 
-    def get_is_subscribed(self, obj):
+    def get_is_subscribed(self, author):
         request = self.context.get('request')
         if request and request.user.is_authenticated:
             return UserSubscription.objects.filter(
-                user=request.user, author=obj
+                user=request.user, author=author
             ).exists()
         return False
 
@@ -44,11 +44,13 @@ class CustomUserSerializer(BaseCustomUserSerializer):
         )
 
     def update(self, instance, validated_data):
-        default_avatar = 'avatars/default_avatar.jpeg'
-        if instance.avatar and instance.avatar.name != default_avatar:
-            instance.avatar.delete()
-        instance.avatar = validated_data.get('avatar', None)
+        avatar = validated_data.get('avatar', None)
+        if avatar:
+            if instance.avatar:
+                instance.avatar.delete()
+            instance.avatar = avatar
         return super().update(instance, validated_data)
+
 
 
 class CustomUserSetPasswordSerializer(serializers.Serializer):
@@ -84,12 +86,12 @@ class UserSubscriptionSerializer(BaseCustomUserSerializer):
             'is_subscribed', 'avatar', 'recipes_count', 'recipes'
         )
 
-    def get_recipes(self, obj):
-        queryset = obj.recipes.all()
+    def get_recipes(self, user):
+        queryset = user.recipes.all()
         limit = self.context.get('recipes_limit')
         if limit:
             queryset = queryset[: int(limit)]
         return RecipeMiniSerializer(queryset, many=True).data
 
-    def get_recipes_count(self, obj):
-        return obj.recipes.count()
+    def get_recipes_count(self, user):
+        return user.recipes.count()

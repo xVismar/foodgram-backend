@@ -76,7 +76,7 @@ class RecipeAdmin(admin.ModelAdmin):
         return ', '.join(
             obj.tags.values_list('name', flat=True).order_by('name'))
 
-    favorite_count.short_descriptrion = 'В избранном'
+    favorite_count.short_description = 'В избранном'
     get_tags.short_description = 'Теги'
 
 
@@ -96,6 +96,7 @@ class TagAdmin(admin.ModelAdmin):
     list_display = ('name', 'slug')
     search_fields = [
         'name',
+        'slug',
     ]
 
 
@@ -111,8 +112,12 @@ class ShoppingCartAdmin(admin.ModelAdmin):
 
 @admin.register(User)
 class UserAdmin(UserAdmin):
-    list_display = ('email', 'username', 'is_active',
-                    'is_staff', 'is_superuser')
+    list_display = (
+        'email',
+        'username',
+        'is_active',
+        'is_staff',
+        'is_superuser')
     search_fields = ('email', 'username')
     fieldsets = (
         (None, {'fields': ('username', 'email', 'password')}),
@@ -164,6 +169,12 @@ class UserAdmin(UserAdmin):
                 ])
             )
         return 'Нет подписок'
+
+    get_subscriptions.short_description = 'Подписки'
+    get_subscriptions.admin_order_field = 'author__username'
+    get_subscriptions.description = 'Показывает подписки пользователя'
+
+
 
     def get_recipes(self, obj):
         recipe_ct = ContentType.objects.get_for_model(Recipe)

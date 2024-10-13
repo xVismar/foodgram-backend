@@ -115,6 +115,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         recipe.tags.set(tags_data)
         return recipe
 
+    @transaction.atomic
     def update(self, instance, validated_data):
         tags_data = validated_data.pop('tags', None)
         ingredients_data = validated_data.pop('recipeingredient_set', None)

@@ -1,11 +1,9 @@
 
 from datetime import datetime
 
-from django.core.files.base import ContentFile
+from django.http import HttpResponse
 from django.db.models import Exists, OuterRef, Sum
-from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect
-from django.utils.encoding import smart_bytes
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -13,7 +11,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from api.filters import RecipeFilter
-from api.pagination import CustomPagination
+from api.pagination import CustomPagination, PaginationNone
 from api.permissions import IsAuthorOrReadOnly
 from api.serializers import (
     IngredientsSerializer, RecipeSerializer, TagSerializer
@@ -26,7 +24,7 @@ from users.serializers import RecipeMiniSerializer
 
 class CustomHandleMixin:
 
-    def custom_add_remove_handle(self, request, pk, model):
+    def cart_add_remove_handle(self, request, pk, model):
         user = request.user
         recipe = get_object_or_404(Recipe, pk=pk)
         if request.method == 'DELETE':
@@ -60,18 +58,23 @@ def shopping_cart_list(ingredients, cart):
     ])
 
 
+def redirect_short_link(request, short_id):
+    recipe = get_object_or_404(Recipe, short_link=short_id)
+    return redirect(f'/recipes/{recipe.id}')
+
+
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     permission_classes = (AllowAny,)
-    pagination_class = None
+    pagination_class = PaginationNone
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all().order_by('id')
     serializer_class = IngredientsSerializer
     permission_classes = (AllowAny,)
-    pagination_class = None
+    pagination_class = PaginationNone
     search_fields = ('name',)
 
     def get_queryset(self):
@@ -86,7 +89,6 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
     pagination_class = CustomPagination
-    permission_classes = (AllowAny,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
     search_fields = ('tags__slug',)
@@ -118,7 +120,15 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
             queryset = queryset.filter(author__id=author)
         return queryset.order_by('id')
 
-    @action(detail=True, methods=['GET'], url_path='get-link')
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(
+        detail=True,
+        methods=['GET'],
+        url_path='get-link'
+    )
     def get_short_link(self, request, pk=None):
         recipe = self.get_object()
         short_link = recipe.get_or_create_short_link()
@@ -133,7 +143,7 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
         url_path='shopping_cart',
     )
     def shopping_cart(self, request, pk=None):
-        return self.custom_add_remove_handle(request, pk, ShoppingCart)
+        return self.cart_add_remove_handle(request, pk, ShoppingCart)
 
     @action(
         detail=False,
@@ -152,15 +162,12 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
             .annotate(total_amount=Sum('amount'))
             .order_by('ingredient__name')
         )
-        shopping_list = smart_bytes(
-            shopping_cart_list(ingredients_sum, shopping_cart)
+        shopping_list = shopping_cart_list(ingredients_sum, shopping_cart)
+        response = HttpResponse(shopping_list, content_type='text/plain')
+        response['Content-Disposition'] = (
+            'attachment; filename="shopping_list.txt"'
         )
-        return FileResponse(
-            ContentFile(shopping_list),
-            as_attachment=True,
-            filename='shopping_list.txt',
-            content_type='text/plain; charset=utf-8'
-        )
+        return response
 
     @action(
         detail=True,
@@ -168,12 +175,6 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
         url_path='favorite',
     )
     def favorite(self, request, pk=None):
-        return self.custom_add_remove_handle(request, pk, Favorite)
-
-    def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+        return self.cart_add_remove_handle(request, pk, Favorite)
 
 
-def redirect_short_link(request, short_id):
-    recipe = get_object_or_404(Recipe, short_link=short_id)
-    return redirect(f'/recipes/{recipe.id}')
