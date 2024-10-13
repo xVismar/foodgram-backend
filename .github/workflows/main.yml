@@ -71,8 +71,7 @@ jobs:
   build_and_push_images:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    needs:
-      - backend_tests
+    needs: backend_tests
     strategy:
       matrix:
         service:
@@ -119,7 +118,7 @@ jobs:
   deploy:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    needs: backend_tests
+    needs: build_and_push_images
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -160,8 +159,7 @@ jobs:
   send_message:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    needs:
-      - deploy
+    needs: deploy
     steps:
       - name: Send Telegram Message
         uses: appleboy/telegram-action@master
