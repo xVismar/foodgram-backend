@@ -16,47 +16,7 @@
         "slug": "desert"
     },
     {
-        "name": "Без глютена",
-        "slug": "gluten-free"
-    },
-    {
-        "name": "Вегетарианство",
-        "slug": "vegetarianism"
-    },
-    {
-        "name": "Домашнее",
-        "slug": "homemade"
-    },
-    {
-        "name": "Здоровое питание",
-        "slug": "healthy-eating"
-    },
-    {
-        "name": "Кето диета",
-        "slug": "keto-diet"
-    },
-    {
-        "name": "Легко",
-        "slug": "easy"
-    },
-    {
-        "name": "Молоко",
-        "slug": "milk"
-    },
-    {
         "name": "Перекус",
         "slug": "snack"
-    },
-
-    {
-        "name": "Специи",
-        "slug": "spices"
-    },
-    {
-        "name": "Быстро",
-        "slug": "cooks-fast"
-    },
-    {   "name": "Долго",
-        "slug": "cooks-long"
     }
 ]
