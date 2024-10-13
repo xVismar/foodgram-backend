@@ -86,6 +86,7 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
     pagination_class = CustomPagination
+    permission_classes = (AllowAny,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
     search_fields = ('tags__slug',)
@@ -96,8 +97,8 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
             'download_shopping_cart', 'shopping_cart'
         ]
         if self.action in actions:
-            return (IsAuthenticated, IsAuthorOrReadOnly,)
-        return (AllowAny,)
+            return (IsAuthenticated(), IsAuthorOrReadOnly(),)
+        return (AllowAny(),)
 
     def get_queryset(self):
         queryset = super().get_queryset()

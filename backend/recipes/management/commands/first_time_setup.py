@@ -14,7 +14,7 @@ class Command(BaseCommand):
     base_dir = Path.cwd()
     source_dir = base_dir / 'data' / 'media_data'
     destination_dir = base_dir / 'media'
-    folders_to_copy = ['avatars', 'recipes']
+    folders_to_copy = ['recipes']
     for folder in folders_to_copy:
         src_folder = source_dir / folder
         dest_folder = destination_dir / folder

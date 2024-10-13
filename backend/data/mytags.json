@@ -16,375 +16,47 @@
         "slug": "desert"
     },
     {
-        "name": "8 марта",
-        "slug": "8th-of-march"
-    },
-    {
-        "name": "BBQ",
-        "slug": "bbq"
-    },
-    {
-        "name": "Азиатская кухня",
-        "slug": "asian-cuisine"
-    },
-    {
-        "name": "Алкогольный коктейль",
-        "slug": "alcoholic-cocktail"
-    },
-    {
-        "name": "Американская кухня",
-        "slug": "american-cuisine"
-    },
-    {
-        "name": "Барбекю",
-        "slug": "barbecue"
-    },
-    {
-        "name": "Без выпечки",
-        "slug": "no-baking"
-    },
-    {
         "name": "Без глютена",
         "slug": "gluten-free"
-    },
-    {
-        "name": "Без мяса",
-        "slug": "meatless"
-    },
-    {
-        "name": "Безалкогольные напитки",
-        "slug": "non-alcoholic-drinks"
-    },
-    {
-        "name": "Блюда на мангале",
-        "slug": "dishes-on-the-grill"
-    },
-    {
-        "name": "Веганы",
-        "slug": "vegans"
     },
     {
         "name": "Вегетарианство",
         "slug": "vegetarianism"
     },
     {
-        "name": "Витамины",
-        "slug": "vitamins"
-    },
-    {
-        "name": "Гарнир",
-        "slug": "garnish"
-    },
-    {
-        "name": "Глазурь",
-        "slug": "glaze"
-    },
-    {
-        "name": "Горячее",
-        "slug": "hot-dish"
-    },
-    {
-        "name": "Горячее копчение",
-        "slug": "hot-smoking"
-    },
-    {
-        "name": "Грузинская кухня",
-        "slug": "georgian-cuisine"
-    },
-    {
-        "name": "День рождения",
-        "slug": "birthday"
-    },
-    {
         "name": "Домашнее",
         "slug": "homemade"
-    },
-    {
-        "name": "Домашняя выпечка",
-        "slug": "homemade-baking"
-    },
-    {
-        "name": "Духовка",
-        "slug": "oven"
-    },
-    {
-        "name": "Жарка",
-        "slug": "frying"
-    },
-    {
-        "name": "Закваска",
-        "slug": "starter-culture"
-    },
-    {
-        "name": "Заливной пирог",
-        "slug": "jelly-cake"
-    },
-    {
-        "name": "Заморозка",
-        "slug": "freezing"
-    },
-    {
-        "name": "Запекание",
-        "slug": "baking"
-    },
-    {
-        "name": "Засолка",
-        "slug": "pickling"
     },
     {
         "name": "Здоровое питание",
         "slug": "healthy-eating"
     },
     {
-        "name": "Индийская кухня",
-        "slug": "indian-cuisine"
-    },
-    {
-        "name": "Итальянская кухня",
-        "slug": "italian-cuisine"
-    },
-    {
-        "name": "Кавказская кухня",
-        "slug": "caucasian-cuisine"
-    },
-    {
-        "name": "Каша",
-        "slug": "porridge"
-    },
-    {
-        "name": "Каша из топора",
-        "slug": "axe-porridge"
-    },
-    {
         "name": "Кето диета",
         "slug": "keto-diet"
-    },
-    {
-        "name": "Китайская кухня",
-        "slug": "chinese-cuisine"
-    },
-    {
-        "name": "Кляр",
-        "slug": "batter"
-    },
-    {
-        "name": "Компот",
-        "slug": "compote"
-    },
-    {
-        "name": "Кондитерские изделия",
-        "slug": "confectionery"
-    },
-    {
-        "name": "Консервирование",
-        "slug": "canning"
-    },
-    {
-        "name": "Копчение",
-        "slug": "smoking"
-    },
-    {
-        "name": "Корейская кухня",
-        "slug": "korean-cuisine"
-    },
-    {
-        "name": "Крем-суп",
-        "slug": "cream-soup"
     },
     {
         "name": "Легко",
         "slug": "easy"
     },
     {
-        "name": "Мангал",
-        "slug": "barbecue"
-    },
-    {
-        "name": "Маринад",
-        "slug": "marinade"
-    },
-    {
-        "name": "Маринование",
-        "slug": "marinating"
-    },
-    {
-        "name": "Масленица",
-        "slug": "maslenitsa"
-    },
-    {
-        "name": "Мед",
-        "slug": "honey"
-    },
-    {
-        "name": "Мексиканская кухня",
-        "slug": "mexican-cuisine"
-    },
-    {
-        "name": "Микроволновка",
-        "slug": "microwave"
-    },
-    {
         "name": "Молоко",
         "slug": "milk"
-    },
-    {
-        "name": "Мультиварка",
-        "slug": "multicooker"
-    },
-    {
-        "name": "Национальная кухня",
-        "slug": "national-cuisine"
-    },
-    {
-        "name": "Начинка",
-        "slug": "stuffing"
-    },
-    {
-        "name": "Необычная еда",
-        "slug": "unusual-food"
-    },
-    {
-        "name": "Новогодний стол",
-        "slug": "new-years-table"
-    },
-    {
-        "name": "Овощной салат",
-        "slug": "vegetable-salad"
-    },
-    {
-        "name": "Острая кухня",
-        "slug": "spicy-cuisine"
-    },
-    {
-        "name": "Острое",
-        "slug": "spicy"
-    },
-    {
-        "name": "Первые блюда",
-        "slug": "first-courses"
     },
     {
         "name": "Перекус",
         "slug": "snack"
     },
-    {
-        "name": "Пирожки",
-        "slug": "pies"
-    },
-    {
-        "name": "Пирожное",
-        "slug": "pastry"
-    },
-    {
-        "name": "Постные блюда",
-        "slug": "lenten-dishes"
-    },
-    {
-        "name": "Приправы",
-        "slug": "seasonings"
-    },
-    {
-        "name": "Русская кухня",
-        "slug": "russian-cuisine"
-    },
-    {
-        "name": "Рыбный суп",
-        "slug": "fish-soup"
-    },
-    {
-        "name": "Салат",
-        "slug": "salad"
-    },
-    {
-        "name": "Салат без майонеза",
-        "slug": "salad-without-mayonnaise"
-    },
-    {
-        "name": "Сахарный диабет",
-        "slug": "diabetes"
-    },
-    {
-        "name": "Сдоба",
-        "slug": "bun"
-    },
-    {
-        "name": "Слоеное тесто",
-        "slug": "puff-pastry"
-    },
-    {
-        "name": "Слоеный салат",
-        "slug": "layered-salad"
-    },
-    {
-        "name": "Смузи",
-        "slug": "smoothie"
-    },
-    {
-        "name": "Соль",
-        "slug": "salt"
-    },
+
     {
         "name": "Специи",
         "slug": "spices"
     },
     {
-        "name": "Суп-пюре",
-        "slug": "cream-soup"
+        "name": "Быстро",
+        "slug": "cooks-fast"
     },
-    {
-        "name": "Суши",
-        "slug": "sushi"
-    },
-    {
-        "name": "Сырный суп",
-        "slug": "cheese-soup"
-    },
-    {
-        "name": "Тайская кухня",
-        "slug": "thai-cuisine"
-    },
-    {
-        "name": "Торт",
-        "slug": "cake"
-    },
-    {
-        "name": "Торт без выпечки",
-        "slug": "no-bake-cake"
-    },
-    {
-        "name": "Традиции",
-        "slug": "traditions"
-    },
-    {
-        "name": "Узбекская кухня",
-        "slug": "uzbek-cuisine"
-    },
-    {
-        "name": "Фарширование",
-        "slug": "stuffing"
-    },
-    {
-        "name": "Фитнес",
-        "slug": "fitness"
-    },
-    {
-        "name": "Французская кухня",
-        "slug": "french-cuisine"
-    },
-    {
-        "name": "Фритюр",
-        "slug": "deep-frying"
-    },
-    {
-        "name": "Хэллоуин",
-        "slug": "halloween"
-    },
-    {
-        "name": "Эксперимент",
-        "slug": "experiment"
-    },
-    {
-        "name": "Японская кухня",
-        "slug": "japanese-cuisine"
+    {   "name": "Долго",
+        "slug": "cooks-long"
     }
 ]
