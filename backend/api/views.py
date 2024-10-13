@@ -176,4 +176,3 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
     )
     def favorite(self, request, pk=None):
         return self.cart_add_remove_handle(request, pk, Favorite)
-##

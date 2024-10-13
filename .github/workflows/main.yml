@@ -28,7 +28,6 @@ jobs:
   backend_tests:
     runs-on: ubuntu-latest
     needs: check_docker_changes
-    if: needs.check_docker_changes.outputs.code_changes == 'true' || needs.check_docker_changes.outputs.dockerfile_changes == 'true'
 
     strategy:
       matrix:
@@ -73,7 +72,6 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     needs:
-      - check_docker_changes
       - backend_tests
     strategy:
       matrix:
@@ -121,7 +119,7 @@ jobs:
   deploy:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    needs: build_and_push_images
+    needs: backend_tests
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
