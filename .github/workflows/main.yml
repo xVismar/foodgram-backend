@@ -189,9 +189,11 @@ jobs:
             Ссылка на последний коммит: https://github.com/${{ github.repository }}/commit/${{github.sha}}
             Автор коммита: ${{ github.actor }}
             Сообщение коммита: ${{ github.event.commits[0].message }}
-            {%if needs.build_and_push_images.outputs.backend_changes == 'true'
+            {%
+            if needs.build_and_push_images.outputs.backend_changes == 'true'
             or needs.build_and_push_images.outputs.frontend_changes == 'true'
-            or needs.build_and_push_images.outputs.gateway_changes == 'true'%}
+            or needs.build_and_push_images.outputs.gateway_changes == 'true'
+            %}
             Изменения в Docker файлах:
             - Backend: ${{ needs.build_and_push_images.outputs.backend_changes }}
             - Frontend: ${{ needs.build_and_push_images.outputs.frontend_changes }}
