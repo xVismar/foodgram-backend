@@ -1,6 +1,6 @@
 
 from datetime import datetime
-
+from django.urls import reverse
 from django.http import HttpResponse
 from django.db.models import Exists, OuterRef, Sum
 from django.shortcuts import get_object_or_404, redirect
@@ -17,7 +17,7 @@ from api.serializers import (
     IngredientsSerializer, RecipeSerializer, TagSerializer
 )
 from recipes.models import (
-    Favorite, Ingredient, Recipe, ShoppingCart, Tag
+    Favorite, Ingredient, Recipe, ShoppingCart, Tag, RecipeIngredient
 )
 from users.serializers import RecipeMiniSerializer
 
@@ -52,7 +52,7 @@ def shopping_cart_list(ingredients, cart):
     recipes = [recipe.name for recipe in cart]
     return '\n'.join([
         f'Дата составления списка покупок: {today}',
-        f'Для приготовления следующих рецептов: {recipes}'
+        f'Для приготовления следующих рецептов: {recipes}',
         'Вам потребуется купить продуктов:'
         f'{ingredients_info}'
     ])
@@ -94,8 +94,8 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
             'download_shopping_cart', 'shopping_cart'
         ]
         if self.action in actions:
-            return (IsAuthenticated(), IsAuthorOrReadOnly(),)
-        return (AllowAny(),)
+            return (IsAuthenticated, IsAuthorOrReadOnly,)
+        return (AllowAny,)
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -128,32 +128,26 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
         return self.cart_add_remove_handle(request, pk, ShoppingCart)
 
     @action(
-        detail=True,
+        detail=False,
         methods=['GET'],
-        url_path='download_shopping_cart',
+        permission_classes=(IsAuthenticated,),
+        url_path='download_shopping_cart'
     )
-    def download_shopping_cart(self, request, pk=None):
+    def download_shopping_cart(self, request):
         user = request.user
-        recipe = self.get_object()
         shopping_cart = ShoppingCart.objects.filter(
-            user=user, recipe__in=recipe.ingredients.values('recipe')
-        ).select_related('recipe__ingredients__ingredient').values(
-            'recipe__ingredients__ingredient__name',
-            'recipe__ingredients__ingredient__measurement_unit',
-            'recipe__ingredients__amount'
-        )
+            user=user
+        ).select_related('recipe').values('recipe')
         ingredients_sum = (
-            shopping_cart.values(
-                'recipe__ingredients__ingredient__name',
-                'recipe__ingredients__ingredient__measurement_unit'
-            ).annotate(total_amount=Sum('recipe__ingredients__amount'))
-            .order_by('recipe__ingredients__ingredient__name')
+            RecipeIngredient.objects.filter(recipe__in=shopping_cart)
+            .values('ingredient__name', 'ingredient__measurement_unit')
+            .annotate(total_amount=Sum('amount'))
+            .order_by('ingredient__name')
         )
         shopping_list = shopping_cart_list(ingredients_sum, shopping_cart)
+        filename = f'{user.username}_shopping_list.txt'
         response = HttpResponse(shopping_list, content_type='text/plain')
-        response['Content-Disposition'] = (
-            'attachment; filename="shopping_list.txt"'
-        )
+        response['Content-Disposition'] = f'attachment; filename={filename}'
         return response
 
     @action(
@@ -172,6 +166,8 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
             {'short-link': short_url}, status=status.HTTP_200_OK
         )
 
-    def redirect_short_link(request, short_id):
-        recipe = get_object_or_404(Recipe, short_link=short_id)
-        return redirect(f'/recipes/{recipe.id}')
+
+def redirect_short_link(request, short_id):
+    recipe = get_object_or_404(Recipe, short_link=short_id)
+    recipe_detail_url = reverse('recipe-detail', kwargs={'pk': recipe.id})
+    return redirect(recipe_detail_url)
