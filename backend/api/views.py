@@ -1,13 +1,13 @@
 
 from datetime import datetime
+from django.http import HttpResponseRedirect
 
-from django.urls import reverse
 from django.http import HttpResponse
 from django.db.models import Exists, OuterRef, Sum, F
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from django.utils.text import slugify
@@ -162,17 +162,20 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
     )
     def download_shopping_cart(self, request):
         user = request.user
-        cart = user.shoppingcart_set.all()
+        cart = user.shoping_cart.all().values_list('recipe', flat=True)
+        cart_recipes = Recipe.objects.filter(
+            id__in=cart
+        ).prefetch_related('ingredients')
         ingredients = RecipeIngredient.objects.filter(
-            recipe__in=cart
+            recipe__in=cart_recipes
         ).values(
             'ingredient__name',
             'ingredient__measurement_unit',
             total_amount=Sum('amount')
         ).annotate(
             recipe=F('recipe__id')
-        ).order_by('recipe')
-        shopping_list = shopping_cart_list(ingredients, cart)
+        )
+        shopping_list = shopping_cart_list(ingredients, cart_recipes)
         filename = f'{user.username}_shopping_list.txt'
         response = HttpResponse(shopping_list, content_type='text/plain')
         response['Content-Disposition'] = f'attachment; filename={filename}'
@@ -186,16 +189,24 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
     def favorite(self, request, pk=None):
         return self.handle_cart_action(request, pk, Favorite)
 
-    def get_short_link(self, request, pk=None):
-        recipe = self.get_object()
-        short_link = recipe.short_link
-        short_url = request.build_absolute_uri(f'/s/{short_link}')
+    @action(
+        detail=True,
+        methods=['GET'],
+        permission_classes=(IsAuthenticated,),
+        url_path='get_link'
+    )
+    def get_link(self, request, *args, **kwargs):
+        url = request.build_absolute_uri('/s/')
         return Response(
-            {'short-link': short_url}, status=status.HTTP_200_OK
+            {'short-link': f'{url}{self.get_object().short_link}'}
         )
 
 
-def redirect_short_link(request, short_id):
-    recipe = get_object_or_404(Recipe, short_link=short_id)
-    recipe_detail_url = reverse('recipe-detail', kwargs={'pk': recipe.id})
-    return redirect(recipe_detail_url)
+@api_view(['GET'])
+def redirect_short_link(request, *args, **kwargs):
+    recipe = get_object_or_404(
+        Recipe,
+        short_link=request.kwargs.get['short_id']
+    )
+    build_url = request.build_absolute_uri(f'/recipes/{recipe.id}/')
+    return HttpResponseRedirect(build_url)

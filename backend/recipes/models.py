@@ -7,13 +7,6 @@ from django.db import models
 User = get_user_model()
 
 
-def get_or_create_short_link(self):
-    if not self.short_link:
-        self.short_link = shortuuid.uuid()[:10]
-        self.save(update_fields=['short_link'])
-    return self.short_link
-
-
 class Tag(models.Model):
     name = models.CharField(
         max_length=settings.MAX_TAG_LENGTH,
@@ -81,7 +74,6 @@ class Recipe(models.Model):
         verbose_name='Тэги',
     )
     cooking_time = models.PositiveSmallIntegerField(
-
         validators=[
             MinValueValidator(
                 1, 'Время приготовления не может быть меньше 1 минуты.'
@@ -92,7 +84,6 @@ class Recipe(models.Model):
     short_link = models.CharField(
         max_length=10,
         blank=True,
-        null=True,
         unique=True,
         verbose_name='Короткая ссылка на рецепт'
     )
