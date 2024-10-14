@@ -13,16 +13,16 @@ class User(AbstractUser):
         max_length=settings.MAX_EMAIL_LENGTH,
         unique=True,
         blank=False,
-        verbose_name='Почта',
         error_messages={
-            'unique': 'Пользователь с таким адресом уже зарегистрирован',
+            'unique': 'Пользователь с таким адресом уже зарегистрирован.',
         },
+        verbose_name='Почта'
     )
     username = models.CharField(
         max_length=settings.MAX_STR_LENGTH,
         unique=True,
         validators=[validate_username, UnicodeUsernameValidator()],
-        verbose_name='Логин',
+        verbose_name='Ник',
     )
     first_name = models.CharField(
         max_length=settings.MAX_STR_LENGTH,
@@ -65,8 +65,9 @@ class UserSubscription(models.Model):
     class Meta:
         constraints = [
             UniqueConstraint(
-                fields=['user', 'author'], name='unique_subscribers'
-            ),
+                fields=['user', 'author'],
+                name='unique_subscribers'
+            )
         ]
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'

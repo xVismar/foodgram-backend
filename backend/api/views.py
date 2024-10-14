@@ -17,7 +17,7 @@ from api.serializers import (
     IngredientsSerializer, RecipeSerializer, TagSerializer
 )
 from recipes.models import (
-    Favorite, Ingredient, Recipe, RecipeIngredient, ShoppingCart, Tag
+    Favorite, Ingredient, Recipe, ShoppingCart, Tag
 )
 from users.serializers import RecipeMiniSerializer
 
@@ -56,11 +56,6 @@ def shopping_cart_list(ingredients, cart):
         'Вам потребуется купить продуктов:'
         f'{ingredients_info}'
     ])
-
-
-def redirect_short_link(request, short_id):
-    recipe = get_object_or_404(Recipe, short_link=short_id)
-    return redirect(f'/recipes/{recipe.id}')
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -126,19 +121,6 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
 
     @action(
         detail=True,
-        methods=['GET'],
-        url_path='get-link'
-    )
-    def get_short_link(self, request, pk=None):
-        recipe = self.get_object()
-        short_link = recipe.get_or_create_short_link()
-        short_url = request.build_absolute_uri(f'/s/{short_link}')
-        return Response(
-            {'short-link': short_url}, status=status.HTTP_200_OK
-        )
-
-    @action(
-        detail=True,
         methods=['POST', 'DELETE'],
         url_path='shopping_cart',
     )
@@ -146,21 +128,26 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
         return self.cart_add_remove_handle(request, pk, ShoppingCart)
 
     @action(
-        detail=False,
+        detail=True,
         methods=['GET'],
-        permission_classes=[IsAuthenticated],
-        url_path='download_shopping_cart'
+        url_path='download_shopping_cart',
     )
-    def download_shopping_cart(self, request):
+    def download_shopping_cart(self, request, pk=None):
         user = request.user
+        recipe = self.get_object()
         shopping_cart = ShoppingCart.objects.filter(
-            user=user
-        ).select_related('recipe').values('recipe')
+            user=user, recipe__in=recipe.ingredients.values('recipe')
+        ).select_related('recipe__ingredients__ingredient').values(
+            'recipe__ingredients__ingredient__name',
+            'recipe__ingredients__ingredient__measurement_unit',
+            'recipe__ingredients__amount'
+        )
         ingredients_sum = (
-            RecipeIngredient.objects.filter(recipe__in=shopping_cart)
-            .values('ingredient__name', 'ingredient__measurement_unit')
-            .annotate(total_amount=Sum('amount'))
-            .order_by('ingredient__name')
+            shopping_cart.values(
+                'recipe__ingredients__ingredient__name',
+                'recipe__ingredients__ingredient__measurement_unit'
+            ).annotate(total_amount=Sum('recipe__ingredients__amount'))
+            .order_by('recipe__ingredients__ingredient__name')
         )
         shopping_list = shopping_cart_list(ingredients_sum, shopping_cart)
         response = HttpResponse(shopping_list, content_type='text/plain')
@@ -176,3 +163,15 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
     )
     def favorite(self, request, pk=None):
         return self.cart_add_remove_handle(request, pk, Favorite)
+
+    def get_short_link(self, request, pk=None):
+        recipe = self.get_object()
+        short_link = recipe.short_link
+        short_url = request.build_absolute_uri(f'/s/{short_link}')
+        return Response(
+            {'short-link': short_url}, status=status.HTTP_200_OK
+        )
+
+    def redirect_short_link(request, short_id):
+        recipe = get_object_or_404(Recipe, short_link=short_id)
+        return redirect(f'/recipes/{recipe.id}')

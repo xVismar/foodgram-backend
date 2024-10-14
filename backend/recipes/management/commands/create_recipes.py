@@ -1,6 +1,7 @@
-from django.core.management.base import BaseCommand
-from recipes.models import Recipe, Ingredient, Tag
 from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand
+
+from recipes.models import Ingredient, Recipe, Tag
 
 User = get_user_model()
 
@@ -150,7 +151,7 @@ class Command(BaseCommand):
                 text=recipe_data['text'],
                 cooking_time=recipe_data['cooking_time'],
                 author_id=recipe_data['author'],
-                image=recipe_data['image']
+                image=recipe_data['image'],
             )
             for ingredient_data in recipe_data['ingredients']:
                 try:
