@@ -111,10 +111,6 @@ class Recipe(models.Model):
     def __str__(self):
         return self.name[:settings.MAX_STR_LENGTH]
 
-    def save(self, *args, **kwargs):
-        self.get_or_create_short_link()
-        super().save(*args, **kwargs)
-
 
 class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(

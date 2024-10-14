@@ -1,14 +1,16 @@
 
 from datetime import datetime
+
 from django.urls import reverse
 from django.http import HttpResponse
-from django.db.models import Exists, OuterRef, Sum
+from django.db.models import Exists, OuterRef, Sum, F
 from django.shortcuts import get_object_or_404, redirect
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from django.utils.text import slugify
 
 from api.filters import RecipeFilter
 from api.pagination import CustomPagination, PaginationNone
@@ -24,7 +26,7 @@ from users.serializers import RecipeMiniSerializer
 
 class CustomHandleMixin:
 
-    def cart_add_remove_handle(self, request, pk, model):
+    def handle_cart_action(self, request, pk, model):
         user = request.user
         recipe = get_object_or_404(Recipe, pk=pk)
         if request.method == 'DELETE':
@@ -34,28 +36,45 @@ class CustomHandleMixin:
                 return Response(status=status.HTTP_204_NO_CONTENT)
             except model.DoesNotExist:
                 return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        if model.objects.filter(user=user, recipe=recipe).exists():
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
         _, created = model.objects.get_or_create(user=user, recipe=recipe)
         if created:
             serializer = RecipeMiniSerializer(recipe)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
+
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
 def shopping_cart_list(ingredients, cart):
     today = datetime.now().strftime('%d-%m-%Y')
+    ingredients_dict = {}
+    for ingredient in ingredients:
+        name = ingredient['ingredient__name']
+        unit = ingredient['ingredient__measurement_unit']
+        amount = ingredient['total_amount']
+
+        if name in ingredients_dict:
+            ingredients_dict[name]['total_amount'] += amount
+        else:
+            ingredients_dict[name] = {
+                'unit': unit,
+                'total_amount': amount
+            }
     ingredients_info = [
-        f"{i}. {ingredient['ingredient__name'].capitalize()} "
-        f"({ingredient['ingredient__measurement_unit']}) — "
-        f"{ingredient['total_amount']}"
-        for i, ingredient in enumerate(ingredients, start=1)
+        f"{i}. {name.capitalize()} ({info['unit']}) — {info['total_amount']}"
+        for i, (name, info) in enumerate(ingredients_dict.items(), start=1)
     ]
     recipes = [recipe.name for recipe in cart]
-    return '\n'.join([
+    shopping_list = '\n'.join([
         f'Дата составления списка покупок: {today}',
         f'Для приготовления следующих рецептов: {recipes}',
-        'Вам потребуется купить продуктов:'
-        f'{ingredients_info}'
+        'Вам потребуется купить продуктов:',
+        *ingredients_info
     ])
+    return shopping_list
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -116,7 +135,9 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
         return queryset.order_by('id')
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+        recipe = serializer.save(author=self.request.user)
+        recipe.short_link = slugify(recipe.title)[:10]
+        recipe.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @action(
@@ -125,8 +146,14 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
         url_path='shopping_cart',
     )
     def shopping_cart(self, request, pk=None):
-        return self.cart_add_remove_handle(request, pk, ShoppingCart)
+        return self.handle_cart_action(request, pk, ShoppingCart)
 
+    @action(
+        detail=False,
+        methods=['GET'],
+        permission_classes=(IsAuthenticated,),
+        url_path='download_shopping_cart'
+    )
     @action(
         detail=False,
         methods=['GET'],
@@ -135,16 +162,17 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
     )
     def download_shopping_cart(self, request):
         user = request.user
-        shopping_cart = ShoppingCart.objects.filter(
-            user=user
-        ).select_related('recipe').values('recipe')
-        ingredients_sum = (
-            RecipeIngredient.objects.filter(recipe__in=shopping_cart)
-            .values('ingredient__name', 'ingredient__measurement_unit')
-            .annotate(total_amount=Sum('amount'))
-            .order_by('ingredient__name')
-        )
-        shopping_list = shopping_cart_list(ingredients_sum, shopping_cart)
+        cart = user.shoppingcart_set.all()
+        ingredients = RecipeIngredient.objects.filter(
+            recipe__in=cart
+        ).values(
+            'ingredient__name',
+            'ingredient__measurement_unit',
+            total_amount=Sum('amount')
+        ).annotate(
+            recipe=F('recipe__id')
+        ).order_by('recipe')
+        shopping_list = shopping_cart_list(ingredients, cart)
         filename = f'{user.username}_shopping_list.txt'
         response = HttpResponse(shopping_list, content_type='text/plain')
         response['Content-Disposition'] = f'attachment; filename={filename}'
@@ -156,7 +184,7 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
         url_path='favorite',
     )
     def favorite(self, request, pk=None):
-        return self.cart_add_remove_handle(request, pk, Favorite)
+        return self.handle_cart_action(request, pk, Favorite)
 
     def get_short_link(self, request, pk=None):
         recipe = self.get_object()
