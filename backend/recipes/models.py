@@ -2,6 +2,7 @@
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 from django.db import models
+import shortuuid
 
 User = get_user_model()
 
@@ -100,6 +101,12 @@ class Recipe(models.Model):
 
     def __str__(self):
         return self.name[:settings.MAX_STR_LENGTH]
+
+    def get_or_create_short_link(self):
+        if not self.short_link:
+            self.short_link = shortuuid.uuid()[:10]
+            self.save(update_fields=['short_link'])
+        return self.short_link
 
 
 class RecipeIngredient(models.Model):

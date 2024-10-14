@@ -1,15 +1,11 @@
-
-from datetime import datetime
-
 from django.http import HttpResponse
 from django.db.models import Exists, OuterRef, Sum
 from django.shortcuts import get_object_or_404, redirect
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
-from rest_framework.decorators import action, api_view
+from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from django.utils.text import slugify
 
 from api.filters import RecipeFilter
 from api.pagination import CustomPagination, PaginationNone
@@ -35,15 +31,10 @@ class CustomHandleMixin:
                 return Response(status=status.HTTP_204_NO_CONTENT)
             except model.DoesNotExist:
                 return Response(status=status.HTTP_400_BAD_REQUEST)
-
-        if model.objects.filter(user=user, recipe=recipe).exists():
-            return Response(status=status.HTTP_400_BAD_REQUEST)
-
         _, created = model.objects.get_or_create(user=user, recipe=recipe)
         if created:
             serializer = RecipeMiniSerializer(recipe)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -134,10 +125,7 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
         return queryset.order_by('id')
 
     def perform_create(self, serializer):
-        recipe = serializer.save(author=self.request.user)
-        recipe.short_link = slugify(recipe.title)[:10]
-        recipe.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        serializer.save(author=self.request.user)
 
     @action(
         detail=True,
@@ -176,34 +164,30 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
     @action(
         detail=False,
         methods=['GET'],
-        permission_classes=(IsAuthenticated,),
-        url_path='download_shopping_cart'
+        url_path='download_shopping_cart',
     )
     def download_shopping_cart(self, request):
         user = request.user
         response = HttpResponse(content_type='text/plain')
-        cart = user.shoping_cart.all().values_list('recipe', flat=True)
-        ingredients = RecipeIngredient.objects.filter(
-            recipe__in=cart
-        ).values(
-            'ingredient__name',
-            'ingredient__measurement_unit'
-        ).annotate(total_amount=Sum('amount')
-                   ).order_by('ingredient__name')
-        today = datetime.now().strftime('%d-%m-%Y')
-        message = (
-            f'Дата составления списка покупок: {today}\n\n'
-            f'Для приготовления следующих рецептов: {cart}\n\n'
-            'Вам потребуется купить продуктов:\n\n'
+        shopping_cart = ShoppingCart.objects.filter(user=user).values_list(
+            'recipe', flat=True
         )
-        response.write(message.encode('utf-8'))
-        for ingredient, item in enumerate(ingredients, start=1):
-            info = (
-                f'{ingredient}. {item["ingredient__name"]} '
+        ingredients_sum = (
+            RecipeIngredient.objects.filter(recipe__in=shopping_cart)
+            .values('ingredient__name', 'ingredient__measurement_unit')
+            .annotate(total_amount=Sum('amount'))
+            .order_by('ingredient__name')
+        )
+        response.write(
+            'Список ингредиентов для приготовления:\n\n'.encode('utf-8')
+        )
+        for index, item in enumerate(ingredients_sum, start=1):
+            line = (
+                f'{index}. {item["ingredient__name"]} '
                 f'({item["ingredient__measurement_unit"]}) - '
                 f'{item["total_amount"]}\n'
             )
-            response.write(info.encode('utf-8'))
+            response.write(line.encode('utf-8'))
         return response
 
     @action(
@@ -217,17 +201,17 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
     @action(
         detail=True,
         methods=['GET'],
-        permission_classes=(IsAuthenticated,),
-        url_path='get_link'
+        url_path='get-link'
     )
-    def get_link(self, request, *args, **kwargs):
-        url = request.build_absolute_uri('/s/')
+    def get_short_link(self, request, pk=None):
+        recipe = self.get_object()
+        short_link = recipe.get_or_create_short_link()
+        short_url = request.build_absolute_uri(f'/s/{short_link}')
         return Response(
-            {'short-link': f'{url}{self.get_object().short_link}'}
+            {'short-link': short_url}, status=status.HTTP_200_OK
         )
 
 
-@api_view(['GET'])
 def redirect_short_link(request, short_id):
     recipe = get_object_or_404(Recipe, short_link=short_id)
-    return redirect(f'/recipes/{recipe.id}/')
+    return redirect(f'/recipes/{recipe.id}')
