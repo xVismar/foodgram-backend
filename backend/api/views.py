@@ -2,7 +2,6 @@ import datetime
 import os
 import tempfile
 
-from django.core.files.base import ContentFile
 from django.db.models import Exists, OuterRef, Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -131,8 +130,8 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
 
     def perform_create(self, serializer):
         recipe = serializer.save(author=self.request.user)
-        if not recipe.short_id:
-            recipe.short_id = recipe.get_or_create_short_link()
+        if not recipe.short_link:
+            recipe.short_link = recipe.get_or_create_short_link()
             recipe.save()
 
     @action(
@@ -180,17 +179,15 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
         )
         filename = f'{request.user.username}_shopping_list.txt'
         shopping_list = shopping_cart_list(ingredients, cart)
+        print('shop list', shopping_list)
         # response = HttpResponse(shopping_list, content_type='text/plain')
-
         # response['Content-Disposition'] = f'attachment; {filename}'
         # return response
         with tempfile.NamedTemporaryFile(mode='w', delete=False) as temp_file:
             temp_file.write(shopping_list)
             temp_file.seek(0)
-
-        # Set the content type and filename headers
             response = HttpResponse(
-                ContentFile(temp_file),
+                temp_file,
                 content_type='text/plain'
             )
             response['Content-Disposition'] = (
@@ -204,5 +201,5 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
 class ShortLinkRedirectView(APIView):
 
     def get(self, request, short_id):
-        recipe = get_object_or_404(Recipe, short_link=short_id)
+        recipe = Recipe.objects.get(short_link=short_id)
         return redirect(f'/recipes/{recipe.id}')
