@@ -1,12 +1,18 @@
+import datetime
+import os
+import tempfile
+
+from django.core.files.base import ContentFile
+from django.db.models import Exists, OuterRef, Sum
 from django.http import HttpResponse
-from django.db.models import Exists, OuterRef, Sum, F
 from django.shortcuts import get_object_or_404, redirect
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-import datetime
+from rest_framework.views import APIView
+
 from api.filters import RecipeFilter
 from api.pagination import CustomPagination, PaginationNone
 from api.permissions import IsAuthorOrReadOnly
@@ -14,10 +20,9 @@ from api.serializers import (
     IngredientsSerializer, RecipeSerializer, TagSerializer
 )
 from recipes.models import (
-    Favorite, Ingredient, Recipe, ShoppingCart, Tag, RecipeIngredient
+    Favorite, Ingredient, Recipe, RecipeIngredient, ShoppingCart, Tag
 )
 from users.serializers import RecipeMiniSerializer
-from rest_framework.views import APIView
 
 
 class CustomHandleMixin:
@@ -161,31 +166,43 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
     @action(
         detail=False,
         methods=['GET'],
-        permission_classes=[IsAuthenticated]
+        permission_classes=[IsAuthenticated],
+        url_path='download_shopping_cart'
     )
     def download_shopping_cart(self, request):
-        user = request.user
-        cart = user.carts.all().values_list('recipe', flat=True)
-        cart_recipes = Recipe.objects.filter(
-            id__in=cart
-        ).prefetch_related('ingredients')
+        cart = request.user.carts.all().values_list('recipe', flat=True)
         ingredients = RecipeIngredient.objects.filter(
-            recipe__in=cart_recipes
+            recipe_id__in=cart
         ).values(
             'ingredient__name',
             'ingredient__measurement_unit',
             total_amount=Sum('amount')
-        ).annotate(
-            recipe=F('recipe__id')
         )
-        shopping_list = shopping_cart_list(ingredients, cart_recipes)
-        response = HttpResponse(shopping_list, content_type='text/plain')
-        filename = f'{user.username}_shopping_list.txt'
-        response['Content-Disposition'] = f'attachment; {filename}'
+        filename = f'{request.user.username}_shopping_list.txt'
+        shopping_list = shopping_cart_list(ingredients, cart)
+        # response = HttpResponse(shopping_list, content_type='text/plain')
+
+        # response['Content-Disposition'] = f'attachment; {filename}'
+        # return response
+        with tempfile.NamedTemporaryFile(mode='w', delete=False) as temp_file:
+            temp_file.write(shopping_list)
+            temp_file.seek(0)
+
+        # Set the content type and filename headers
+            response = HttpResponse(
+                ContentFile(temp_file),
+                content_type='text/plain'
+            )
+            response['Content-Disposition'] = (
+                f'attachment; filename={filename}'
+            )
+        temp_file.close()
+        os.remove(temp_file.name)
         return response
 
 
 class ShortLinkRedirectView(APIView):
+
     def get(self, request, short_id):
         recipe = get_object_or_404(Recipe, short_link=short_id)
         return redirect(f'/recipes/{recipe.id}')
