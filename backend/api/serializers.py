@@ -1,25 +1,29 @@
 from django.db import transaction
-from rest_framework import serializers
+from rest_framework import serializers, validators
 
 from api.fields import Base64ImageField
 from recipes.models import (
     Favorite, Ingredient, Recipe, RecipeIngredient, ShoppingCart, Tag,
 )
-from users.serializers import CustomUserSerializer
+from users.serializers import CustomUserSerializer, RecipeMiniSerializer
+from django.contrib.auth import get_user_model
+
+
+User = get_user_model()
 
 
 class TagSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Tag
-        fields = ('id', 'name', 'slug')
+        fields = '__all__'
 
 
 class IngredientsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Ingredient
-        fields = ('id', 'name', 'measurement_unit')
+        fields = '__all__'
 
 
 class RecipeIngredientSerializer(serializers.ModelSerializer):
@@ -151,4 +155,25 @@ class RecipeSerializer(serializers.ModelSerializer):
             ShoppingCart.objects.filter(user=request.user, recipe=obj).exists()
             if request and request.user.is_authenticated
             else False
+        )
+
+
+class ShoppingCartSerializer(serializers.ModelSerializer):
+    user = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all())
+    recipe = serializers.PrimaryKeyRelatedField(queryset=Recipe.objects.all())
+
+    class Meta:
+        model = ShoppingCart
+        fields = ('user', 'recipe')
+        validators = (validators.UniqueTogetherValidator(
+            queryset=ShoppingCart.objects.all(),
+            fields=('user', 'recipe'),
+            message=('Этот рецепт уже есть в списке покупок')
+        ),
+        )
+
+    def to_representation(self, instance):
+        return RecipeMiniSerializer().to_representation(
+            Recipe.objects.get(id=instance.recipe.id)
         )

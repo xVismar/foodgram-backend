@@ -1,12 +1,12 @@
 from django.http import HttpResponse
-from django.db.models import Exists, OuterRef, Sum
+from django.db.models import Exists, OuterRef, Sum, F
 from django.shortcuts import get_object_or_404, redirect
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-
+import datetime
 from api.filters import RecipeFilter
 from api.pagination import CustomPagination, PaginationNone
 from api.permissions import IsAuthorOrReadOnly
@@ -17,6 +17,7 @@ from recipes.models import (
     Favorite, Ingredient, Recipe, ShoppingCart, Tag, RecipeIngredient
 )
 from users.serializers import RecipeMiniSerializer
+from rest_framework.views import APIView
 
 
 class CustomHandleMixin:
@@ -38,33 +39,32 @@ class CustomHandleMixin:
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
-# def shopping_cart_list(ingredients, cart):
-#     today = datetime.now().strftime('%d-%m-%Y')
-#     ingredients_dict = {}
-#     for ingredient in ingredients:
-#         name = ingredient['ingredient__name']
-#         unit = ingredient['ingredient__measurement_unit']
-#         amount = ingredient['total_amount']
-
-#         if name in ingredients_dict:
-#             ingredients_dict[name]['total_amount'] += amount
-#         else:
-#             ingredients_dict[name] = {
-#                 'unit': unit,
-#                 'total_amount': amount
-#             }
-#     ingredients_info = [
-#         f"{i}. {name.capitalize()} ({info['unit']}) — {info['total_amount']}"
-#         for i, (name, info) in enumerate(ingredients_dict.items(), start=1)
-#     ]
-#     recipes = [recipe.name for recipe in cart]
-#     shopping_list = '\n'.join([
-#         f'Дата составления списка покупок: {today}',
-#         f'Для приготовления следующих рецептов: {recipes}',
-#         'Вам потребуется купить продуктов:',
-#         *ingredients_info
-#     ])
-#     return shopping_list
+def shopping_cart_list(ingredients, cart):
+    today = datetime.now().strftime('%d-%m-%Y')
+    ingredients_dict = {}
+    for ingredient in ingredients:
+        name = ingredient['ingredient__name']
+        unit = ingredient['ingredient__measurement_unit']
+        amount = ingredient['total_amount']
+        if name in ingredients_dict:
+            ingredients_dict[name]['total_amount'] += amount
+        else:
+            ingredients_dict[name] = {
+                'unit': unit,
+                'total_amount': amount
+            }
+    ingredients_info = [
+        f"{i}. {name.capitalize()} ({info['unit']}) — {info['total_amount']}"
+        for i, (name, info) in enumerate(ingredients_dict.items(), start=1)
+    ]
+    recipes = [recipe.name for recipe in cart]
+    shopping_list = '\n'.join([
+        f'Дата составления списка покупок: {today}',
+        f'Для приготовления следующих рецептов: {recipes}',
+        'Вам потребуется купить продуктов:',
+        *ingredients_info
+    ])
+    return shopping_list
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -125,7 +125,10 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
         return queryset.order_by('id')
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+        recipe = serializer.save(author=self.request.user)
+        if not recipe.short_id:
+            recipe.short_id = recipe.get_or_create_short_link()
+            recipe.save()
 
     @action(
         detail=True,
@@ -134,61 +137,6 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
     )
     def shopping_cart(self, request, pk=None):
         return self.handle_cart_action(request, pk, ShoppingCart)
-    # @action(
-    #     detail=False,
-    #     methods=['GET'],
-    #     permission_classes=(IsAuthenticated,),
-    #     url_path='download_shopping_cart'
-    # )
-    # def download_shopping_cart(self, request):
-    #     user = request.user
-    #     cart = user.shoping_cart.all().values_list('recipe', flat=True)
-    #     cart_recipes = Recipe.objects.filter(
-    #         id__in=cart
-    #     ).prefetch_related('ingredients')
-    #     ingredients = RecipeIngredient.objects.filter(
-    #         recipe__in=cart_recipes
-    #     ).values(
-    #         'ingredient__name',
-    #         'ingredient__measurement_unit',
-    #         total_amount=Sum('amount')
-    #     ).annotate(
-    #         recipe=F('recipe__id')
-    #     )
-    #     shopping_list = shopping_cart_list(ingredients, cart_recipes)
-    #     filename = f'{user.username}_shopping_list.txt'
-    #     response = HttpResponse(shopping_list, content_type='text/plain')
-    #     response['Content-Disposition'] = f'attachment; filename={filename}'
-    #     return response
-
-    @action(
-        detail=False,
-        methods=['GET'],
-        url_path='download_shopping_cart',
-    )
-    def download_shopping_cart(self, request):
-        user = request.user
-        response = HttpResponse(content_type='text/plain')
-        shopping_cart = ShoppingCart.objects.filter(user=user).values_list(
-            'recipe', flat=True
-        )
-        ingredients_sum = (
-            RecipeIngredient.objects.filter(recipe__in=shopping_cart)
-            .values('ingredient__name', 'ingredient__measurement_unit')
-            .annotate(total_amount=Sum('amount'))
-            .order_by('ingredient__name')
-        )
-        response.write(
-            'Список ингредиентов для приготовления:\n\n'.encode('utf-8')
-        )
-        for index, item in enumerate(ingredients_sum, start=1):
-            line = (
-                f'{index}. {item["ingredient__name"]} '
-                f'({item["ingredient__measurement_unit"]}) - '
-                f'{item["total_amount"]}\n'
-            )
-            response.write(line.encode('utf-8'))
-        return response
 
     @action(
         detail=True,
@@ -205,13 +153,39 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
     )
     def get_short_link(self, request, pk=None):
         recipe = self.get_object()
-        short_link = recipe.get_or_create_short_link()
-        short_url = request.build_absolute_uri(f'/s/{short_link}')
+        short_url = request.build_absolute_uri(f'/s/{recipe.short_id}')
         return Response(
             {'short-link': short_url}, status=status.HTTP_200_OK
         )
 
+    @action(
+        detail=False,
+        methods=['GET'],
+        permission_classes=[IsAuthenticated]
+    )
+    def download_shopping_cart(self, request):
+        user = request.user
+        cart = user.carts.all().values_list('recipe', flat=True)
+        cart_recipes = Recipe.objects.filter(
+            id__in=cart
+        ).prefetch_related('ingredients')
+        ingredients = RecipeIngredient.objects.filter(
+            recipe__in=cart_recipes
+        ).values(
+            'ingredient__name',
+            'ingredient__measurement_unit',
+            total_amount=Sum('amount')
+        ).annotate(
+            recipe=F('recipe__id')
+        )
+        shopping_list = shopping_cart_list(ingredients, cart_recipes)
+        response = HttpResponse(shopping_list, content_type='text/plain')
+        filename = f'{user.username}_shopping_list.txt'
+        response['Content-Disposition'] = f'attachment; {filename}'
+        return response
 
-def redirect_short_link(request, short_id):
-    recipe = get_object_or_404(Recipe, short_link=short_id)
-    return redirect(f'/recipes/{recipe.id}')
+
+class ShortLinkRedirectView(APIView):
+    def get(self, request, short_id):
+        recipe = get_object_or_404(Recipe, short_link=short_id)
+        return redirect(f'/recipes/{recipe.id}')

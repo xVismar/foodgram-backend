@@ -43,7 +43,7 @@ recipes_data = {
             "крышкой также до румяной корочки."
         ),
         "cooking_time": 30,
-        "author": 1
+        "author": 2
     },
     "recipe_two": {
         "ingredients": [
@@ -78,7 +78,7 @@ recipes_data = {
             "Приятного аппетита!!!"
         ),
         "cooking_time": 40,
-        "author": 1
+        "author": 3
     },
     "recipe_three": {
         "ingredients": [
@@ -122,7 +122,7 @@ recipes_data = {
             "Приятного аппетита!"
         ),
         "cooking_time": 35,
-        "author": 1
+        "author": 4
     },
 }
 
@@ -153,6 +153,8 @@ class Command(BaseCommand):
                 author_id=recipe_data['author'],
                 image=recipe_data['image'],
             )
+            recipe.short_link = recipe.get_or_create_short_link()
+            recipe.save()
             for ingredient_data in recipe_data['ingredients']:
                 try:
                     ingredient = Ingredient.objects.get(
