@@ -104,7 +104,7 @@ class Recipe(models.Model):
 
     def get_or_create_short_link(self):
         if not self.short_link:
-            self.short_link = shortuuid.uuid()[:10]
+            self.short_link = shortuuid.uuid()[:8]
             self.save(update_fields=['short_link'])
         return self.short_link
 

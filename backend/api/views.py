@@ -1,16 +1,16 @@
 import datetime
-import os
-import tempfile
+from weasyprint import HTML
 
 from django.db.models import Exists, OuterRef, Sum
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404
+from django.views.generic import RedirectView
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
+
 
 from api.filters import RecipeFilter
 from api.pagination import CustomPagination, PaginationNone
@@ -165,7 +165,6 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
     @action(
         detail=False,
         methods=['GET'],
-        permission_classes=[IsAuthenticated],
         url_path='download_shopping_cart'
     )
     def download_shopping_cart(self, request):
@@ -177,29 +176,27 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
             'ingredient__measurement_unit',
             total_amount=Sum('amount')
         )
-        filename = f'{request.user.username}_shopping_list.txt'
+        filename = f'{request.user.username}_shopping_list.pdf'
         shopping_list = shopping_cart_list(ingredients, cart)
-        print('shop list', shopping_list)
-        # response = HttpResponse(shopping_list, content_type='text/plain')
-        # response['Content-Disposition'] = f'attachment; {filename}'
-        # return response
-        with tempfile.NamedTemporaryFile(mode='w', delete=False) as temp_file:
-            temp_file.write(shopping_list)
-            temp_file.seek(0)
-            response = HttpResponse(
-                temp_file,
-                content_type='text/plain'
-            )
-            response['Content-Disposition'] = (
-                f'attachment; filename={filename}'
-            )
-        temp_file.close()
-        os.remove(temp_file.name)
+        html_template = f"""
+        <html>
+        <head>
+            <title>Shopping Cart</title>
+        </head>
+        <body>
+            <h1>Shopping Cart</h1>
+            <pre>{shopping_list}</pre>
+        </body>
+        </html>
+        """
+        pdf_file = HTML(string=html_template).write_pdf()
+        response = HttpResponse(pdf_file, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename={filename}'
         return response
 
 
-class ShortLinkRedirectView(APIView):
+class ShortLinkRedirectView(RedirectView):
 
-    def get(self, request, short_id):
-        recipe = Recipe.objects.get(short_link=short_id)
-        return redirect(f'/recipes/{recipe.id}')
+    def get_redirect_url(self, short_id, *args, **kwargs):
+        recipe = get_object_or_404(Recipe, short_link=short_id)
+        return f'https://foodgram-vismar.ddns.net/recipes/{recipe.id}/'
