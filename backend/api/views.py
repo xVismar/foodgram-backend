@@ -1,16 +1,14 @@
 import datetime
-from weasyprint import HTML
 
-from django.db.models import Exists, OuterRef, Sum
+from django.db.models import Exists, OuterRef
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404
-from django.views.generic import RedirectView
+from django.shortcuts import get_object_or_404, redirect
 from django_filters.rest_framework import DjangoFilterBackend
+from django.views import View
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-
 
 from api.filters import RecipeFilter
 from api.pagination import CustomPagination, PaginationNone
@@ -43,7 +41,7 @@ class CustomHandleMixin:
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
-def shopping_cart_list(ingredients, cart):
+def shopping_cart_list(ingredients, cart_recipes):
     today = datetime.now().strftime('%d-%m-%Y')
     ingredients_dict = {}
     for ingredient in ingredients:
@@ -61,7 +59,7 @@ def shopping_cart_list(ingredients, cart):
         f"{i}. {name.capitalize()} ({info['unit']}) — {info['total_amount']}"
         for i, (name, info) in enumerate(ingredients_dict.items(), start=1)
     ]
-    recipes = [recipe.name for recipe in cart]
+    recipes = [recipe.name for recipe in cart_recipes]
     shopping_list = '\n'.join([
         f'Дата составления списка покупок: {today}',
         f'Для приготовления следующих рецептов: {recipes}',
@@ -157,7 +155,7 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
     )
     def get_short_link(self, request, pk=None):
         recipe = self.get_object()
-        short_url = request.build_absolute_uri(f'/s/{recipe.short_id}')
+        short_url = request.build_absolute_uri(f'/s/{recipe.short_link}')
         return Response(
             {'short-link': short_url}, status=status.HTTP_200_OK
         )
@@ -169,34 +167,27 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
     )
     def download_shopping_cart(self, request):
         cart = request.user.carts.all().values_list('recipe', flat=True)
+        cart_recipes = Recipe.objects.filter(id__in=cart)
         ingredients = RecipeIngredient.objects.filter(
             recipe_id__in=cart
         ).values(
             'ingredient__name',
             'ingredient__measurement_unit',
-            total_amount=Sum('amount')
+            'amount'
         )
-        filename = f'{request.user.username}_shopping_list.pdf'
-        shopping_list = shopping_cart_list(ingredients, cart)
-        html_template = f"""
-        <html>
-        <head>
-            <title>Shopping Cart</title>
-        </head>
-        <body>
-            <h1>Shopping Cart</h1>
-            <pre>{shopping_list}</pre>
-        </body>
-        </html>
-        """
-        pdf_file = HTML(string=html_template).write_pdf()
-        response = HttpResponse(pdf_file, content_type='application/pdf')
+        shopping_list = shopping_cart_list(ingredients, cart_recipes)
+        filename = f'{request.user.username}_shopping_list.txt'
+        response = HttpResponse(
+            shopping_list,
+            content_type='text/plain; charset=utf-8'
+        )
         response['Content-Disposition'] = f'attachment; filename={filename}'
         return response
 
 
-class ShortLinkRedirectView(RedirectView):
-
-    def get_redirect_url(self, short_id, *args, **kwargs):
-        recipe = get_object_or_404(Recipe, short_link=short_id)
-        return f'https://foodgram-vismar.ddns.net/recipes/{recipe.id}/'
+class ShortLinkRedirectView(View):
+    def get(self, request, short_id):
+        recipe = Recipe.objects.get(short_link=short_id)
+        return redirect(
+            f'https://foodgram-vismar.ddns.net/recipes/{recipe.id}/'
+        )
