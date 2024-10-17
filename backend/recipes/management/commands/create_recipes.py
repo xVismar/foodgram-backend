@@ -153,8 +153,6 @@ class Command(BaseCommand):
                 author_id=recipe_data['author'],
                 image=recipe_data['image'],
             )
-            recipe.short_link = recipe.get_or_create_short_link()
-            recipe.save()
             for ingredient_data in recipe_data['ingredients']:
                 try:
                     ingredient = Ingredient.objects.get(
