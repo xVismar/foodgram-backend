@@ -7,8 +7,9 @@ RUN pip install --upgrade pip
 COPY requirements.txt .
 
 RUN pip install -r requirements.txt --no-cache-dir
+RUN apt-get update
+RUN apt-get install -y nano
 
 COPY . .
 
-# # CMD ["gunicorn", "--bind", "0.0.0.0:8080", "foodgram_backend.wsgi"]
 CMD ["sh", "entrypoint.sh"]

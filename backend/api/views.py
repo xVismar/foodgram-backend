@@ -127,10 +127,7 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
         return queryset.order_by('id')
 
     def perform_create(self, serializer):
-        recipe = serializer.save(author=self.request.user)
-        if not recipe.short_link:
-            recipe.short_link = recipe.get_or_create_short_link()
-            recipe.save()
+        serializer.save(author=self.request.user)
 
     @action(
         detail=True,

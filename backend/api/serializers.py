@@ -119,8 +119,6 @@ class RecipeSerializer(serializers.ModelSerializer):
         recipe.image.save(image_data.name, image_data, save=True)
         self.recipe_ingredients_create(recipe, ingredients_data)
         recipe.tags.set(tags_data)
-        recipe.short_link = recipe.get_or_create_short_link()
-        recipe.save()
         return recipe
 
     @transaction.atomic
