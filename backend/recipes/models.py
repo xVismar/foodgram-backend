@@ -108,6 +108,11 @@ class Recipe(models.Model):
             self.save(update_fields=['short_link'])
         return self.short_link
 
+    def save(self, *args, **kwargs):
+        if not self.short_link:
+            self.get_or_create_short_link()
+        super().save(*args, **kwargs)
+
 
 class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(

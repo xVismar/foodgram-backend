@@ -1,6 +1,5 @@
 import datetime
 
-from django.conf import settings
 from django.db.models import Exists, OuterRef
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -156,10 +155,10 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
     def get_short_link(self, request, pk=None):
         recipe = self.get_object()
         short_link = recipe.get_or_create_short_link()
-        short_url = (
-            settings.HOME_DOMAIN + str(f's/{short_link}')
+        url = request.build_absolute_uri().replace(
+            'get-link/', f's/{short_link}'
         )
-        return Response({'short-link': short_url}, status=status.HTTP_200_OK)
+        return Response({'short-link': url})
 
     @action(
         detail=False,
@@ -188,8 +187,7 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
 
 
 class ShortLinkRedirectView(View):
-    def get(self, request, short_id):
-        recipe = get_object_or_404(Recipe, short_link=short_id)
-        return redirect(
-            settings.HOME_DOMAIN + str(recipe.id)
-        )
+
+    def get(self, request, short_link):
+        recipe = get_object_or_404(Recipe, short_link=short_link)
+        return redirect(f'/recipes/{recipe.id}/')
