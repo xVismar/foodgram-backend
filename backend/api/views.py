@@ -1,4 +1,7 @@
 import datetime
+import tempfile
+import os
+
 
 from django.db.models import Exists, OuterRef
 from django.http import HttpResponse
@@ -175,12 +178,18 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
             'amount'
         )
         shopping_list = shopping_cart_list(ingredients, cart_recipes)
+        with tempfile.NamedTemporaryFile(
+            mode='w', delete=False, suffix='.txt'
+        ) as temp_file:
+            temp_file.write(shopping_list)
+            temp_file_path = temp_file.name
         filename = f'{request.user.username}_shopping_list.txt'
         response = HttpResponse(
-            shopping_list,
+            open(temp_file_path, 'rb'),
             content_type='text/plain; charset=utf-8'
         )
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        os.remove(temp_file_path)
         return response
 
 

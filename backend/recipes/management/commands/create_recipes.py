@@ -43,7 +43,7 @@ recipes_data = {
             "крышкой также до румяной корочки."
         ),
         "cooking_time": 30,
-        "author": 2
+        "author": 1
     },
     "recipe_two": {
         "ingredients": [
@@ -78,7 +78,7 @@ recipes_data = {
             "Приятного аппетита!!!"
         ),
         "cooking_time": 40,
-        "author": 3
+        "author": 2
     },
     "recipe_three": {
         "ingredients": [
@@ -93,7 +93,7 @@ recipes_data = {
             {"id": 879, "amount": 200},
             {"id": 1646, "amount": 25}
         ],
-        "tags": [5],
+        "tags": [3],
         "image": "recipes/recipe_three.jpg",
         "name": (
             "Пирожки-минутка, жареные с луком и яйцом, быстрое заварное тесто"
@@ -122,7 +122,7 @@ recipes_data = {
             "Приятного аппетита!"
         ),
         "cooking_time": 35,
-        "author": 4
+        "author": 3
     },
 }
 
