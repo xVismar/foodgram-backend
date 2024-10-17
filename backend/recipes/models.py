@@ -85,6 +85,7 @@ class Recipe(models.Model):
         max_length=10,
         blank=True,
         unique=True,
+        null=True,
         verbose_name='Короткая ссылка на рецепт'
     )
     created_at = models.DateTimeField(
@@ -118,6 +119,7 @@ class RecipeIngredient(models.Model):
     ingredient = models.ForeignKey(
         Ingredient,
         on_delete=models.CASCADE,
+        related_name='recipeingredients',
         verbose_name='Ингредиент'
     )
     amount = models.PositiveIntegerField(
@@ -130,7 +132,6 @@ class RecipeIngredient(models.Model):
     )
 
     class Meta:
-        default_related_name = 'recipeingredients'
         constraints = [
             models.UniqueConstraint(
                 name='unique_recipe_ingredient',
@@ -148,16 +149,17 @@ class ShoppingCart(models.Model):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
+        related_name='shopping_cart',
         verbose_name='Пользователь',
     )
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
+        related_name='in_shopping_cart',
         verbose_name='Рецепт',
     )
 
     class Meta:
-        default_related_name = 'carts'
         constraints = [
             models.UniqueConstraint(
                 name='unique_shopping_cart',
@@ -175,16 +177,17 @@ class Favorite(models.Model):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
+        related_name='favorites',
         verbose_name='Пользователь'
     )
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
+        related_name='favorited_by',
         verbose_name='Рецепт'
     )
 
     class Meta:
-        default_related_name = 'favorites'
         constraints = [
             models.UniqueConstraint(
                 name='unique_favorite',

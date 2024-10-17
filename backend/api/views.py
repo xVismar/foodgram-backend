@@ -10,7 +10,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.views import View
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from api.filters import RecipeFilter
@@ -109,7 +109,7 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
             'download_shopping_cart', 'shopping_cart'
         ]
         if self.action in actions:
-            return (IsAuthorOrReadOnly(),)
+            return (IsAuthenticated(), IsAuthorOrReadOnly(),)
         return (AllowAny(),)
 
     def get_queryset(self):
@@ -132,6 +132,7 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @action(
         detail=True,
@@ -168,7 +169,9 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
         url_path='download_shopping_cart'
     )
     def download_shopping_cart(self, request):
-        cart = request.user.carts.all().values_list('recipe', flat=True)
+        cart = request.user.shopping_cart.all().values_list(
+            'recipe', flat=True
+        )
         cart_recipes = Recipe.objects.filter(id__in=cart)
         ingredients = RecipeIngredient.objects.filter(
             recipe_id__in=cart
@@ -195,7 +198,7 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
 
 class ShortLinkRedirectView(View):
     def get(self, request, short_id):
-        recipe = Recipe.objects.get(short_link=short_id)
+        recipe = get_object_or_404(Recipe, short_link=short_id)
         return redirect(
-            f'https://foodgram-vismar.ddns.net/recipes/{recipe.id}/'
+            'https://foodgram-vismar.ddns.net/recipes/' + str(recipe.id)
         )

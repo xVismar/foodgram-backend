@@ -1,11 +1,11 @@
 from django.db import transaction
-from rest_framework import serializers, validators
+from rest_framework import serializers
 
 from api.fields import Base64ImageField
 from recipes.models import (
     Favorite, Ingredient, Recipe, RecipeIngredient, ShoppingCart, Tag,
 )
-from users.serializers import CustomUserSerializer, RecipeMiniSerializer
+from users.serializers import CustomUserSerializer
 from django.contrib.auth import get_user_model
 
 
@@ -39,12 +39,16 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
 
 
 class RecipeSerializer(serializers.ModelSerializer):
-    tags = TagSerializer(many=True, read_only=True)
+    tags = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Tag.objects.all(),
+        required=True
+    )
     author = CustomUserSerializer(read_only=True)
     ingredients = RecipeIngredientSerializer(
         many=True,
         required=True,
-        source='recipeingredients'
+        source='recipeingredient_set'
     )
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
@@ -152,25 +156,3 @@ class RecipeSerializer(serializers.ModelSerializer):
             if request and request.user.is_authenticated
             else False
         )
-
-
-class ShoppingCartSerializer(serializers.ModelSerializer):
-    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
-    recipe = serializers.PrimaryKeyRelatedField(queryset=Recipe.objects.all())
-
-    class Meta:
-        model = ShoppingCart
-        fields = ('user', 'recipe')
-        validators = (validators.UniqueTogetherValidator(
-            queryset=ShoppingCart.objects.all(),
-            fields=('user', 'recipe'),
-            message=('Этот рецепт уже есть в списке покупок')
-        ),
-        )
-
-    def to_representation(self, instance):
-        request = self.context.get('request')
-        return RecipeMiniSerializer(
-            instance.recipe,
-            context={'request': request}
-        ).data
