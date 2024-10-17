@@ -16,14 +16,14 @@ class TagSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Tag
-        fields = '__all__'
+        fields = ('id', 'name', 'slug')
 
 
 class IngredientsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Ingredient
-        fields = '__all__'
+        fields = ('id', 'name', 'measurement_unit')
 
 
 class RecipeIngredientSerializer(serializers.ModelSerializer):
@@ -39,16 +39,12 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
 
 
 class RecipeSerializer(serializers.ModelSerializer):
-    tags = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=Tag.objects.all(),
-        required=True
-    )
+    tags = TagSerializer(many=True, read_only=True)
     author = CustomUserSerializer(read_only=True)
     ingredients = RecipeIngredientSerializer(
         many=True,
         required=True,
-        source='recipeingredient_set'
+        source='recipeingredients'
     )
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
@@ -112,7 +108,7 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def create(self, validated_data):
-        ingredients_data = validated_data.pop('recipeingredient_set')
+        ingredients_data = validated_data.pop('recipeingredients')
         tags_data = validated_data.pop('tags')
         image_data = validated_data.pop('image')
         recipe = Recipe.objects.create(**validated_data)
@@ -159,8 +155,7 @@ class RecipeSerializer(serializers.ModelSerializer):
 
 
 class ShoppingCartSerializer(serializers.ModelSerializer):
-    user = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all())
+    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
     recipe = serializers.PrimaryKeyRelatedField(queryset=Recipe.objects.all())
 
     class Meta:
@@ -174,6 +169,8 @@ class ShoppingCartSerializer(serializers.ModelSerializer):
         )
 
     def to_representation(self, instance):
-        return RecipeMiniSerializer().to_representation(
-            Recipe.objects.get(id=instance.recipe.id)
-        )
+        request = self.context.get('request')
+        return RecipeMiniSerializer(
+            instance.recipe,
+            context={'request': request}
+        ).data
