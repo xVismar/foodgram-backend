@@ -13,8 +13,6 @@ DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost').split(', ')
 
-HOME_DOMAIN = os.environ.get('HOME_DOMAIN', 'localhost')
-
 AUTH_USER_MODEL = 'users.User'
 USER_PROFILE_URL = 'me'
 
