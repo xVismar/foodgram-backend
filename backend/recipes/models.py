@@ -85,7 +85,6 @@ class Recipe(models.Model):
         max_length=10,
         blank=True,
         unique=True,
-        null=True,
         verbose_name='Короткая ссылка на рецепт'
     )
     created_at = models.DateTimeField(
@@ -105,7 +104,7 @@ class Recipe(models.Model):
 
     def get_or_create_short_link(self):
         if not self.short_link:
-            self.short_link = shortuuid.uuid()[:8]
+            self.short_link = shortuuid.uuid()[:10]
             self.save(update_fields=['short_link'])
         return self.short_link
 

@@ -7,6 +7,7 @@ User = get_user_model()
 
 recipes_data = {
     "recipe_one": {
+        "id": 1,
         "ingredients": [
             {"id": 2180, "amount": 2},
             {"id": 591, "amount": 1},
@@ -43,9 +44,11 @@ recipes_data = {
             "крышкой также до румяной корочки."
         ),
         "cooking_time": 30,
-        "author": 1
+        "author": 1,
+        "short_link": "fp9bxYSq"
     },
     "recipe_two": {
+        "id": 2,
         "ingredients": [
             {"id": 520, "amount": 1000},
             {"id": 886, "amount": 1},
@@ -78,9 +81,11 @@ recipes_data = {
             "Приятного аппетита!!!"
         ),
         "cooking_time": 40,
-        "author": 2
+        "author": 2,
+        "short_link": "fp9bxdsQ"
     },
     "recipe_three": {
+        "id": 3,
         "ingredients": [
             {"id": 1081, "amount": 500},
             {"id": 1419, "amount": 50},
@@ -122,7 +127,8 @@ recipes_data = {
             "Приятного аппетита!"
         ),
         "cooking_time": 35,
-        "author": 3
+        "author": 3,
+        "short_link": "fp41xYSq"
     },
 }
 
@@ -147,11 +153,13 @@ class Command(BaseCommand):
             return
         for recipe_key, recipe_data in recipes_data.items():
             recipe = Recipe.objects.create(
+                id=recipe_data['id'],
                 name=recipe_data['name'],
                 text=recipe_data['text'],
                 cooking_time=recipe_data['cooking_time'],
                 author_id=recipe_data['author'],
                 image=recipe_data['image'],
+                short_link=recipe_data['short_link']
             )
             for ingredient_data in recipe_data['ingredients']:
                 try:

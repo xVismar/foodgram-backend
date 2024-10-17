@@ -1,8 +1,6 @@
 import datetime
-import tempfile
-import os
 
-
+from django.conf import settings
 from django.db.models import Exists, OuterRef
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -158,10 +156,10 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
     def get_short_link(self, request, pk=None):
         recipe = self.get_object()
         short_link = recipe.get_or_create_short_link()
-        short_url = request.build_absolute_uri(f'/s/{short_link}')
-        return Response(
-            {'short-link': short_url}, status=status.HTTP_200_OK
+        short_url = (
+            settings.HOME_DOMAIN + str(f's/{short_link}')
         )
+        return Response({'short-link': short_url}, status=status.HTTP_200_OK)
 
     @action(
         detail=False,
@@ -181,18 +179,11 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
             'amount'
         )
         shopping_list = shopping_cart_list(ingredients, cart_recipes)
-        with tempfile.NamedTemporaryFile(
-            mode='w', delete=False, suffix='.txt'
-        ) as temp_file:
-            temp_file.write(shopping_list)
-            temp_file_path = temp_file.name
         filename = f'{request.user.username}_shopping_list.txt'
         response = HttpResponse(
-            open(temp_file_path, 'rb'),
-            content_type='text/plain; charset=utf-8'
+            shopping_list, content_type='text/plain; charset=utf-8'
         )
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        os.remove(temp_file_path)
         return response
 
 
@@ -200,5 +191,5 @@ class ShortLinkRedirectView(View):
     def get(self, request, short_id):
         recipe = get_object_or_404(Recipe, short_link=short_id)
         return redirect(
-            'https://foodgram-vismar.ddns.net/recipes/' + str(recipe.id)
+            settings.HOME_DOMAIN + str(recipe.id)
         )
