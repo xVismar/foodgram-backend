@@ -153,7 +153,8 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
     )
     def get_short_link(self, request, pk=None):
         recipe = self.get_object()
-        short_url = request.build_absolute_uri(f'/s/{recipe.short_link}')
+        short_link = recipe.get_or_create_short_link()
+        short_url = request.build_absolute_uri(f'/s/{short_link}')
         return Response(
             {'short-link': short_url}, status=status.HTTP_200_OK
         )
@@ -179,7 +180,7 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
             shopping_list,
             content_type='text/plain; charset=utf-8'
         )
-        response['Content-Disposition'] = f'attachment; filename={filename}'
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response
 
 
