@@ -15,4 +15,3 @@ class IsAuthorOrReadOnly(permissions.BasePermission):
             or request.user.is_authenticated
             and recipe.author == request.user
         )
-
