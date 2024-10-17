@@ -4,7 +4,6 @@ from django.db.models import Exists, OuterRef
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django_filters.rest_framework import DjangoFilterBackend
-from django.views import View
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -105,9 +104,9 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
             'create', 'update', 'partial_update', 'destroy', 'favorite',
             'download_shopping_cart', 'shopping_cart'
         ]
-        if self.action in actions:
-            return (IsAuthenticated(), IsAuthorOrReadOnly(),)
-        return (AllowAny(),)
+        if self.action not in actions:
+            return (AllowAny(),)
+        return (IsAuthenticated(), IsAuthorOrReadOnly(),)
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -155,10 +154,10 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
     def get_short_link(self, request, pk=None):
         recipe = self.get_object()
         short_link = recipe.get_or_create_short_link()
-        url = request.build_absolute_uri().replace(
-            'get-link/', f's/{short_link}'
+        short_url = request.build_absolute_uri(f'/s/{short_link}')
+        return Response(
+            {'short-link': short_url}, status=status.HTTP_200_OK
         )
-        return Response({'short-link': url})
 
     @action(
         detail=False,
@@ -186,8 +185,6 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
         return response
 
 
-class ShortLinkRedirectView(View):
-
-    def get(self, request, short_link):
-        recipe = get_object_or_404(Recipe, short_link=short_link)
-        return redirect(f'/recipes/{recipe.id}/')
+def redirect_short_link(request, short_id):
+    recipe = get_object_or_404(Recipe, short_link=short_id)
+    return redirect(f'/recipes/{recipe.id}')
