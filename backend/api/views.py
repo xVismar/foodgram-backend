@@ -7,7 +7,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.views import View
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from api.filters import RecipeFilter
@@ -29,8 +29,8 @@ class CustomHandleMixin:
         recipe = get_object_or_404(Recipe, pk=pk)
         if request.method == 'DELETE':
             try:
-                item = model.objects.get(user=user, recipe=recipe)
-                item.delete()
+                recipe = model.objects.get(user=user, recipe=recipe)
+                recipe.delete()
                 return Response(status=status.HTTP_204_NO_CONTENT)
             except model.DoesNotExist:
                 return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -59,10 +59,11 @@ def shopping_cart_list(ingredients, cart_recipes):
         f"{i}. {name.capitalize()} ({info['unit']}) — {info['total_amount']}"
         for i, (name, info) in enumerate(ingredients_dict.items(), start=1)
     ]
-    recipes = [recipe.name for recipe in cart_recipes]
+    recipes = Recipe.objects.filter(id__in=cart_recipes)
+    recipe_names = [recipe.name for recipe in recipes]
     shopping_list = '\n'.join([
         f'Дата составления списка покупок: {today}',
-        f'Для приготовления следующих рецептов: {recipes}',
+        f'Для приготовления следующих рецептов: {recipe_names}',
         'Вам потребуется купить продуктов:',
         *ingredients_info
     ])
@@ -105,7 +106,7 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
             'download_shopping_cart', 'shopping_cart'
         ]
         if self.action in actions:
-            return (IsAuthenticated, IsAuthorOrReadOnly,)
+            return (IsAuthorOrReadOnly,)
         return (AllowAny,)
 
     def get_queryset(self):
