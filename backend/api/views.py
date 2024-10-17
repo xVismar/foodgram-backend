@@ -42,12 +42,12 @@ class CustomHandleMixin:
 
 
 def shopping_cart_list(ingredients, cart_recipes):
-    today = datetime.now().strftime('%d-%m-%Y')
+    today = datetime.datetime.now().strftime('%d-%m-%Y')
     ingredients_dict = {}
     for ingredient in ingredients:
         name = ingredient['ingredient__name']
         unit = ingredient['ingredient__measurement_unit']
-        amount = ingredient['total_amount']
+        amount = ingredient['amount']
         if name in ingredients_dict:
             ingredients_dict[name]['total_amount'] += amount
         else:
@@ -106,8 +106,8 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
             'download_shopping_cart', 'shopping_cart'
         ]
         if self.action in actions:
-            return (IsAuthorOrReadOnly,)
-        return (AllowAny,)
+            return (IsAuthorOrReadOnly(),)
+        return (AllowAny(),)
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -125,7 +125,7 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
             queryset = queryset.filter(tags__slug__in=tags).distinct()
         if author:
             queryset = queryset.filter(author__id=author)
-        return queryset.order_by('id')
+        return queryset.order_by('-created_at')
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
