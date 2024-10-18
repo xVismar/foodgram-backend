@@ -150,7 +150,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             'download_shopping_cart', 'shopping_cart'
         ]
         return (
-            (AllowAny,) if self.action not in actions
+            (AllowAny(),) if self.action not in actions
             else super().get_permissions()
         )
 
@@ -228,5 +228,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
 
 def redirect_short_link(request, short_id):
-    recipe = get_object_or_404(Recipe, pk=short_id)
-    return redirect(reverse('recipe-detail', kwargs={'pk': recipe.id}))
+    recipe = get_object_or_404(Recipe, short_link=short_id)
+    api_url = reverse('api:recipe-detail', args=[recipe.id])
+    front_url = api_url.replace('/api/', '')
+    return redirect(front_url)

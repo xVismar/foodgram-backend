@@ -11,14 +11,14 @@ class RecipeFilter(FilterSet):
         model = Recipe
         fields = ('is_in_shopping_cart', 'is_favorited',)
 
-    def filter_is_in_shopping_cart(self, recipes, name, value):
+    def filter_is_in_shopping_cart(self, recipes, name, is_in_shopping_cart):
         user = self.request.user
-        if user.is_authenticated and value:
-            return recipes.filter(in_shopping_cart__user=user)
+        if user.is_authenticated and is_in_shopping_cart:
+            return recipes.filter(carts__user=user)
         return recipes
 
-    def filter_is_favorited(self, recipes, name, value):
+    def filter_is_favorited(self, recipes, name, is_favorited):
         user = self.request.user
-        if user.is_authenticated and value:
-            return recipes.filter(favorited_by__user=user)
+        if user.is_authenticated and is_favorited:
+            return recipes.filter(favorites__user=user)
         return recipes
