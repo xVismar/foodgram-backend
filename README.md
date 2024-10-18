@@ -90,4 +90,4 @@ git push
 
 # Авторы
 Frontend - [Команда Яндекс Практикума [yandex-praktikum]](https://github.com/yandex-praktikum)
-Backend - [Aлексеев Алексей (Vismar)](https://github.com/xVismar)    
+Backend - [Aлексеев Алексей (Vismar)](https://github.com/xVismar)
