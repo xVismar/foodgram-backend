@@ -8,7 +8,7 @@ from django.contrib.auth.validators import UnicodeUsernameValidator
 
 class User(AbstractUser):
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username', 'first_name', 'last_name',]
+    REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
     email = models.EmailField(
         max_length=settings.MAX_EMAIL_LENGTH,
         unique=True,
