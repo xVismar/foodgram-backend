@@ -18,7 +18,9 @@ class Command(BaseCommand):
         if User.objects.filter(username=username).exists():
             self.stdout.write(
                 self.style.WARNING(
-                    f'Суперпользователь {username} уже существует.'))
+                    f'Суперпользователь {username} уже существует.'
+                )
+            )
         else:
             User.objects.create_superuser(
                 username=username,
@@ -29,4 +31,6 @@ class Command(BaseCommand):
             )
             self.stdout.write(
                 self.style.SUCCESS(
-                    f'Суперпользователь {username} создан успешно.'))
+                    f'Суперпользователь {username} создан успешно.'
+                )
+            )

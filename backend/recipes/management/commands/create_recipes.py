@@ -45,7 +45,6 @@ recipes_data = {
         ),
         "cooking_time": 30,
         "author": 1,
-        # "short_link": "fp9bxYSq"
     },
     "recipe_two": {
         "id": 2,
@@ -82,7 +81,6 @@ recipes_data = {
         ),
         "cooking_time": 40,
         "author": 2,
-        # "short_link": "fp9bxdsQ"
     },
     "recipe_three": {
         "id": 3,
@@ -128,7 +126,6 @@ recipes_data = {
         ),
         "cooking_time": 35,
         "author": 3,
-        # "short_link": "fp41xYSq"
     },
     "recipe_four": {
         "id": 4,
@@ -205,7 +202,7 @@ recipes_data = {
             "натрите на крупную терку.\n"
             "В кипящую воду добавьте картофель, доведите до кипения.\n"
             "После закипания снимите пенку, приправьте солью.\n"
-            "Варите  картофель15 минут.\n"
+            "Варите картофель15 минут.\n"
             "На сковороду налейте масло, добавьте лук, морковь, свёклу "
             "пассируйте овощи 5 минут.\n"
             "К овощам добавьте томатную пасту, приправу и кипяток, тушите "
@@ -306,6 +303,16 @@ class Command(BaseCommand):
             )
             return
         for recipe_key, recipe_data in recipes_data.items():
+            try:
+                Recipe.objects.get(id=recipe_data['id'])
+                self.stdout.write(
+                    self.style.WARNING(
+                        f'Рецепт с ID={recipe_data["id"]} уже существует.'
+                    )
+                )
+                continue
+            except Recipe.DoesNotExist:
+                pass
             recipe = Recipe.objects.create(
                 id=recipe_data['id'],
                 name=recipe_data['name'],

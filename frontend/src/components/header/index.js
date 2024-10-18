@@ -20,20 +20,22 @@ const Header = ({ loggedIn, onSignOut, orders }) => {
           onSignOut={onSignOut}
           orders={orders}
         />
-         <Button
-          className={styles.navButton}
-          activeClassName={styles.navButtonActive}
-          to="/about"
-        >
-          About
-        </Button>
-        <Button
-          className={styles.navButton}
-          activeClassName={styles.navButtonActive}
-          to="/technologies"
-        >
-          Technologies
-        </Button>
+        <NavLink to="/about">
+          <Button
+            className={styles.navButton}
+            activeClassName={styles.navButtonActive}
+          >
+            About
+          </Button>
+        </NavLink>
+        <NavLink to="/technologies">
+          <Button
+            className={styles.navButton}
+            activeClassName={styles.navButtonActive}
+          >
+            Technologies
+          </Button>
+        </NavLink>
       </div>
     </Container>
   </header>
