@@ -70,7 +70,7 @@ recipes_data = {
             ", чтобы удалить воду.\n"
             "На мелкой терке натрите лук и пропустите чеснок через "
             "пресс-чеснок.\n"
-            "'Укроп мелко нарежьте.\n"
+            "Укроп мелко нарежьте.\n"
             "К капусте добавьте лук, чеснок и зелень. Посолите, приправьте "
             "специями по вкусу.\n"
             "Добавьте муку, манную крупу, тщательно перемешайте.\n"
@@ -320,10 +320,7 @@ class Command(BaseCommand):
                 cooking_time=recipe_data['cooking_time'],
                 author_id=recipe_data['author'],
                 image=recipe_data['image'],
-                short_link=None
             )
-            recipe.short_link = recipe.get_or_create_short_link()
-            recipe.save()
             for ingredient_data in recipe_data['ingredients']:
                 try:
                     ingredient = Ingredient.objects.get(

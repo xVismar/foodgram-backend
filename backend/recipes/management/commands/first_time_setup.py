@@ -22,8 +22,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         commands = [
-            'import_ingredients',
-            'import_tags',
+            'import_data',
             'create_superuser',
             'create_users',
             'create_recipes',

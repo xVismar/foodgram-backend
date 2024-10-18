@@ -1,21 +1,15 @@
 from django.contrib import admin
-from django.db import models
-from django.forms import CheckboxSelectMultiple
-
-from recipes.models import (
-    Favorite,
-    Ingredient,
-    Recipe,
-    RecipeIngredient,
-    ShoppingCart,
-    Tag,
-)
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.contenttypes.models import ContentType
+from django.db import models
+from django.forms import CheckboxSelectMultiple
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
-from users.models import User, UserSubscription
+from recipes.models import (
+    Favorite, Ingredient, Recipe, RecipeIngredient, ShoppingCart, Subscription,
+    Tag, User
+)
 
 
 class RecipeIngredientInline(admin.TabularInline):
@@ -156,7 +150,7 @@ class UserAdmin(UserAdmin):
         app_label = custom_user_ct.app_label
         model_name = custom_user_ct.model
 
-        subscriptions = UserSubscription.objects.filter(user=obj)
+        subscriptions = Subscription.objects.filter(user=obj)
         if subscriptions.exists():
             return mark_safe(
                 '<br>'.join([
@@ -217,6 +211,6 @@ class UserAdmin(UserAdmin):
     get_favorited_recipes.short_description = 'Избранные рецепты'
 
 
-@admin.register(UserSubscription)
+@admin.register(Subscription)
 class UserSubscriptionAdmin(admin.ModelAdmin):
     list_display = ('user', 'author')

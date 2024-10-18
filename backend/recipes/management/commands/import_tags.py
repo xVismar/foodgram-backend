@@ -15,21 +15,10 @@ class Command(BaseCommand):
         try:
             with open(file_path, 'r', encoding='utf-8') as file:
                 tags_data = json.load(file)
-            existing_tags = set(Tag.objects.values_list('name', flat=True))
-            new_tags = [
-                Tag(**tag) for tag in tags_data
-                if tag['name'] not in existing_tags
-            ]
-            if new_tags:
-                Tag.objects.bulk_create(new_tags, ignore_conflicts=True)
+                new_tags = [Tag(**tag) for tag in tags_data]
+                Tag.objects.bulk_create(new_tags, unique_fields='name')
                 self.stdout.write(
                     self.style.SUCCESS('Теги успешно импортированы.')
-                )
-            else:
-                self.stdout.write(
-                    self.style.WARNING(
-                        'Новые теги не найдены. Импорт пропущен.'
-                    )
                 )
         except FileNotFoundError:
             self.stdout.write(self.style.ERROR(f'Файл не найден: {file_path}'))

@@ -11,7 +11,7 @@ def validate_username(username):
             f'Использовать {username} в качестве логина запрещено!'
         )
     matching_chars = re.findall(r'^[\w.@+-]', username)
-    if username and not matching_chars:
+    if not matching_chars:
         invalid_chars = ''.join(set(matching_chars))
         raise ValidationError(
             f'Поле "username" содержит недопустимые символы: {invalid_chars}!'

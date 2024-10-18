@@ -13,7 +13,7 @@ DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost').split(', ')
 
-AUTH_USER_MODEL = 'users.User'
+AUTH_USER_MODEL = 'recipes.User'
 USER_PROFILE_URL = 'me'
 
 INSTALLED_APPS = [
@@ -28,7 +28,6 @@ INSTALLED_APPS = [
     'djoser',
     'django_filters',
     'api.apps.ApiConfig',
-    'users.apps.UsersConfig',
     'recipes.apps.RecipesConfig',
 ]
 
@@ -100,7 +99,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'ru-RU'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/Moscow'
 
 USE_I18N = True
 
@@ -147,7 +146,7 @@ MAX_RECIPE_NAME_LENGTH = 256
 MAX_INGREDIENT_NAME_LENGTH = 128
 MAX_MEASUREMENT_UNIT_LENGTH = 64
 MAX_AMOUNT_COOK_TIME = 32000
-MIN_AMOUNT_COOK_TIME = 1
+MIN_AMOUNT_COOK_TIME_INGREDIENT = 1
 MAX_ID_LENGTH = 11
 MAX_URL_LENGTH = 8
 PAGINATION_PAGE_SIZE = 6
