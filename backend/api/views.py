@@ -104,7 +104,7 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
             'create', 'update', 'partial_update', 'destroy', 'favorite',
             'download_shopping_cart', 'shopping_cart'
         ]
-        if self.action not in actions:
+        if self.action in actions:
             return (IsAuthenticated(), IsAuthorOrReadOnly(),)
         return (AllowAny(),)
 
