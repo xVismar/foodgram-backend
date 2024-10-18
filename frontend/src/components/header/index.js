@@ -3,6 +3,8 @@ import { Nav, AccountMenu, LinkComponent } from '../index.js'
 import Container from '../container'
 import LogoHeader from '../../images/logo-header.png'
 import { NavLink } from 'react-router-dom'
+import Button from '../button'
+
 
 const Header = ({ loggedIn, onSignOut, orders }) => {
   return <header className={styles.header}>
@@ -18,22 +20,20 @@ const Header = ({ loggedIn, onSignOut, orders }) => {
           onSignOut={onSignOut}
           orders={orders}
         />
-        <NavLink
-          exact
+         <Button
+          className={styles.navButton}
+          activeClassName={styles.navButtonActive}
           to="/about"
-          className={styles.navLink}
-          activeClassName={styles.navLinkActive}
         >
           About
-        </NavLink>
-        <NavLink
-          exact
+        </Button>
+        <Button
+          className={styles.navButton}
+          activeClassName={styles.navButtonActive}
           to="/technologies"
-          className={styles.navLink}
-          activeClassName={styles.navLinkActive}
         >
           Technologies
-        </NavLink>
+        </Button>
       </div>
     </Container>
   </header>
