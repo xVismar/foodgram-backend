@@ -1,5 +1,7 @@
 import datetime
+import os
 
+from django.conf import settings
 from django.db.models import Exists, OuterRef
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -8,7 +10,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-
+from django.views import View
 from api.filters import RecipeFilter
 from api.pagination import CustomPagination, PaginationNone
 from api.permissions import IsAuthorOrReadOnly
@@ -187,3 +189,21 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
 def redirect_short_link(request, short_link):
     recipe = get_object_or_404(Recipe, short_link=short_link)
     return redirect(f'/recipes/{recipe.id}')
+
+
+class AboutPageView(View):
+
+    def get(self, request):
+        file_path = os.path.join(
+            settings.STATIC_URL, 'pages', 'about', 'index.js'
+        )
+        return redirect(file_path)
+
+
+class TechnologiesPageView(View):
+
+    def get(self, request):
+        file_path = os.path.join(
+            settings.STATIC_URL, 'pages', 'technologies', 'index.js'
+        )
+        return redirect(file_path)
