@@ -153,8 +153,7 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
     )
     def get_short_link(self, request, pk=None):
         recipe = self.get_object()
-        short_link = recipe.get_or_create_short_link()
-        short_url = request.build_absolute_uri(f'/s/{short_link}')
+        short_url = request.build_absolute_uri(f'/s/{recipe.short_link}')
         return Response(
             {'short-link': short_url}, status=status.HTTP_200_OK
         )
@@ -185,6 +184,6 @@ class RecipeViewSet(viewsets.ModelViewSet, CustomHandleMixin):
         return response
 
 
-def redirect_short_link(request, short_id):
-    recipe = get_object_or_404(Recipe, short_link=short_id)
+def redirect_short_link(request, short_link):
+    recipe = get_object_or_404(Recipe, short_link=short_link)
     return redirect(f'/recipes/{recipe.id}')
