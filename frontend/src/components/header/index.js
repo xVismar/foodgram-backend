@@ -20,18 +20,16 @@ const Header = ({ loggedIn, onSignOut, orders }) => {
           onSignOut={onSignOut}
           orders={orders}
         />
-        <NavLink to="/about">
+        <NavLink to="/about" activeClassName={styles.navButtonActive} exact>
           <Button
             className={styles.navButton}
-            activeClassName={styles.navButtonActive}
           >
             About
           </Button>
         </NavLink>
-        <NavLink to="/technologies">
+        <NavLink to="/technologies" activeClassName={styles.navButtonActive} exact>
           <Button
             className={styles.navButton}
-            activeClassName={styles.navButtonActive}
           >
             Technologies
           </Button>

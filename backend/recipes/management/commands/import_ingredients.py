@@ -16,11 +16,11 @@ class Command(BaseCommand):
             with open(file_path, 'r', encoding='utf-8') as file:
                 ingredients_data = json.load(file)
             existing_ingredients = set(Ingredient.objects.values_list(
-                'title', flat=True
+                'name', flat=True
             ))
             new_ingredients = [
                 Ingredient(**ingredient) for ingredient in ingredients_data
-                if ingredient['title'] not in existing_ingredients
+                if ingredient['name'] not in existing_ingredients
             ]
             if new_ingredients:
                 Ingredient.objects.bulk_create(

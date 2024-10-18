@@ -15,10 +15,10 @@ class Command(BaseCommand):
         try:
             with open(file_path, 'r', encoding='utf-8') as file:
                 tags_data = json.load(file)
-            existing_tags = set(Tag.objects.values_list('title', flat=True))
+            existing_tags = set(Tag.objects.values_list('name', flat=True))
             new_tags = [
                 Tag(**tag) for tag in tags_data
-                if tag['title'] not in existing_tags
+                if tag['name'] not in existing_tags
             ]
             if new_tags:
                 Tag.objects.bulk_create(new_tags, ignore_conflicts=True)
