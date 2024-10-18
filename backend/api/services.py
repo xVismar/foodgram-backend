@@ -1,11 +1,17 @@
 import datetime
 
 from django.shortcuts import get_object_or_404
-from rest_framework import status
+from rest_framework import status, serializers
 from rest_framework.response import Response
 
-from api.serializers import RecipeMiniSerializer
 from recipes.models import Recipe
+
+
+class RecipeMiniSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Recipe
+        fields = ('id', 'name', 'image', 'cooking_time')
 
 
 def handle_cart_actions(request, pk, model):
