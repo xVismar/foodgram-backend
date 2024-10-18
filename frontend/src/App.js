@@ -5,6 +5,7 @@ import React, { useState, useEffect } from "react";
 import { Header, Footer, ProtectedRoute } from "./components";
 import api from "./api";
 import styles from "./styles.module.css";
+import { Link } from 'react-router-dom'
 
 import {
   About,
