@@ -5,20 +5,53 @@ from django.db import models
 from django.forms import CheckboxSelectMultiple
 from django.urls import reverse
 from django.utils.safestring import mark_safe
+from django.utils.html import format_html
+from api.filters import CookingTimeFilter
 
 from recipes.models import (
     Favorite, Ingredient, Recipe, RecipeIngredient, ShoppingCart, Subscription,
-    Tag, User
+    Tag, User, RecipeTag
 )
+
+
+def format_tags(func):
+
+    def wrapper(self, recipe):
+        tags = func(self, recipe)
+        return format_html('<br>'.join(tags))
+    return wrapper
+
+
+def set_short_description(description):
+    def decorator(func):
+        func.short_description = description
+        return func
+    return decorator
+
+
+def allow_tags(func):
+    func.allow_tags = True
+    return func
 
 
 class RecipeIngredientInline(admin.TabularInline):
     model = RecipeIngredient
     extra = 0
 
+    def ingredient_info(self, recipeingredient):
+        ingredient = Ingredient.objects.get(id=recipeingredient.ingredient_id)
+        return f'{ingredient.name} ({ingredient.measurement_unit})'
+
+    readonly_fields = ["ingredient_info"]
+
 
 class TagInline(admin.TabularInline):
-    model = Tag
+    model = RecipeTag
+    extra = 0
+
+
+class FavoriteInline(admin.TabularInline):
+    model = Favorite
     extra = 0
 
 
@@ -29,17 +62,23 @@ class RecipeAdmin(admin.ModelAdmin):
         'author',
         'favorite_count',
         'get_tags',
+        'image',
+        'cooking_time'
     )
     search_fields = [
         'author__username',
         'name',
+        'tags'
     ]
+    autocomplete_fields = ['author']
     list_filter = [
         'tags',
+        'author',
+        CookingTimeFilter,
     ]
-    inlines = [RecipeIngredientInline]
+    inlines = [RecipeIngredientInline, TagInline, FavoriteInline]
     fieldsets = (
-        (None, {'fields': ('name', 'author', 'tags')}),
+        (None, {'fields': ('name', 'author', )}),
         ('Описание', {'fields': ('text', 'cooking_time', 'image')}),
     )
     add_fieldsets = (
@@ -63,15 +102,15 @@ class RecipeAdmin(admin.ModelAdmin):
         models.ManyToManyField: {'widget': CheckboxSelectMultiple},
     }
 
-    def favorite_count(self, obj):
-        return Favorite.objects.filter(recipe=obj).count()
+    @set_short_description('В избранном')
+    def favorite_count(self, recipe):
+        return recipe.favorites.all().count()
 
-    def get_tags(self, obj):
-        return ', '.join(
-            obj.tags.values_list('name', flat=True).order_by('name'))
-
-    favorite_count.short_description = 'В избранном'
-    get_tags.short_description = 'Теги'
+    @allow_tags
+    @set_short_description('Теги')
+    @format_tags
+    def get_tags(self, recipe):
+        return recipe.tags.values_list('name', flat=True).order_by('name')
 
 
 @admin.register(Ingredient)
@@ -111,7 +150,12 @@ class UserAdmin(UserAdmin):
         'username',
         'is_active',
         'is_staff',
-        'is_superuser')
+        'is_superuser',
+        'number_of_recipes',
+        'number_of_subscriptions',
+        'number_of_subscribers',
+        'avatar'
+    )
     search_fields = ('email', 'username')
     fieldsets = (
         (None, {'fields': ('username', 'email', 'password')}),
@@ -145,12 +189,12 @@ class UserAdmin(UserAdmin):
     readonly_fields = ('get_subscriptions', 'get_recipes',
                        'get_favorited_recipes')
 
-    def get_subscriptions(self, obj):
+    @set_short_description('Подписки')
+    def get_subscriptions(self, user):
         custom_user_ct = ContentType.objects.get_for_model(User)
         app_label = custom_user_ct.app_label
         model_name = custom_user_ct.model
-
-        subscriptions = Subscription.objects.filter(user=obj)
+        subscriptions = user.authors.all()
         if subscriptions.exists():
             return mark_safe(
                 '<br>'.join([
@@ -164,16 +208,12 @@ class UserAdmin(UserAdmin):
             )
         return 'Нет подписок'
 
-    get_subscriptions.short_description = 'Подписки'
-    get_subscriptions.admin_order_field = 'author__username'
-    get_subscriptions.description = 'Показывает подписки пользователя'
-
-    def get_recipes(self, obj):
+    @set_short_description('Рецепты')
+    def get_recipes(self, user):
         recipe_ct = ContentType.objects.get_for_model(Recipe)
         app_label = recipe_ct.app_label
         model_name = recipe_ct.model
-
-        recipes = Recipe.objects.filter(author=obj)
+        recipes = user.recipes.all()
         if recipes.exists():
             return mark_safe(
                 '<br>'.join([
@@ -187,12 +227,12 @@ class UserAdmin(UserAdmin):
             )
         return 'Нет рецептов'
 
-    def get_favorited_recipes(self, obj):
+    @set_short_description('Избранные рецепты')
+    def get_favorited_recipes(self, user):
         recipe_ct = ContentType.objects.get_for_model(Favorite)
         app_label = recipe_ct.app_label
         model_name = recipe_ct.model
-
-        favorited_recipes = Favorite.objects.filter(user=obj)
+        favorited_recipes = user.favorites.all()
         if favorited_recipes.exists():
             return mark_safe(
                 '<br>'.join([
@@ -206,11 +246,7 @@ class UserAdmin(UserAdmin):
             )
         return 'Нет избранных рецептов'
 
-    get_subscriptions.short_description = 'Подписки'
-    get_recipes.short_description = 'Рецепты'
-    get_favorited_recipes.short_description = 'Избранные рецепты'
-
 
 @admin.register(Subscription)
-class UserSubscriptionAdmin(admin.ModelAdmin):
+class SubscriptionAdmin(admin.ModelAdmin):
     list_display = ('user', 'author')

@@ -23,7 +23,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'rest_framework.authtoken',
+    # 'rest_framework.authtoken',
     'rest_framework',
     'djoser',
     'django_filters',
@@ -140,7 +140,7 @@ DJOSER = {
 # Константы проекта
 MAX_EMAIL_LENGTH = 254
 MAX_NAME_LENGTH = 150
-MAX_STR_LENGTH = 20
+MAX_STR_LENGTH = 55
 MAX_TAG_LENGTH = 32
 MAX_RECIPE_NAME_LENGTH = 256
 MAX_INGREDIENT_NAME_LENGTH = 128

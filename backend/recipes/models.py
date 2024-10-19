@@ -44,6 +44,18 @@ class User(AbstractUser):
     def __str__(self):
         return self.username[:settings.MAX_STR_LENGTH]
 
+    @property
+    def number_of_recipes(self):
+        return self.recipes.count()
+
+    @property
+    def number_of_subscriptions(self):
+        return self.authors.count()
+
+    @property
+    def number_of_subscribers(self):
+        return Subscription.objects.filter(author=self).count()
+
 
 class Subscription(models.Model):
     user = models.ForeignKey(
@@ -145,6 +157,7 @@ class Recipe(models.Model):
     )
     tags = models.ManyToManyField(
         Tag,
+        through='RecipeTag',
         verbose_name='Тэги',
     )
     cooking_time = models.PositiveIntegerField(
@@ -154,7 +167,7 @@ class Recipe(models.Model):
                 'Время приготовления не может быть меньше 1 минуты.'
             )
         ],
-        verbose_name='Время приготовления'
+        verbose_name='Время готовки (мин)'
     )
     created_at = models.DateTimeField(
         auto_now_add=True,
@@ -170,6 +183,27 @@ class Recipe(models.Model):
 
     def __str__(self):
         return self.name[:settings.MAX_STR_LENGTH]
+
+
+class RecipeTag(models.Model):
+    recipe = models.ForeignKey(
+        Recipe,
+        on_delete=models.CASCADE,
+        verbose_name='Рецепт'
+    )
+    tag = models.ForeignKey(
+        Tag,
+        on_delete=models.CASCADE,
+        verbose_name='Тэг'
+    )
+
+    class Meta:
+        default_related_name = 'recipetags'
+        verbose_name = 'Тэг рецепта'
+        verbose_name_plural = 'Тэги рецепта'
+
+    def __str__(self):
+        return f'{self.recipe}'
 
 
 class RecipeIngredient(models.Model):
@@ -205,7 +239,7 @@ class RecipeIngredient(models.Model):
         verbose_name_plural = 'Продукты в рецепте'
 
     def __str__(self):
-        return f'{self.ingredient} в {self.recipe}'
+        return f'{self.recipe}'
 
 
 class UserRecipeBaseModel(models.Model):
@@ -251,5 +285,5 @@ class Favorite(UserRecipeBaseModel):
             )
         ]
         default_related_name = 'favorites'
-        verbose_name = 'Избранное'
-        verbose_name_plural = 'Избранное'
+        verbose_name = 'В избранном'
+        verbose_name_plural = 'В избранных'
