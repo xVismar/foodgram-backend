@@ -142,7 +142,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
     search_fields = ('tags__slug',)
-    permission_classes = (IsAuthenticated(), IsAuthorOrReadOnly(),)
 
     def get_permissions(self):
         actions = [
@@ -150,8 +149,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
             'download_shopping_cart', 'shopping_cart'
         ]
         return (
-            (AllowAny(),) if self.action not in actions
-            else super().get_permissions()
+            (IsAuthenticated, IsAuthorOrReadOnly,)
+            if self.action in actions else (AllowAny,)
         )
 
     def get_queryset(self):
