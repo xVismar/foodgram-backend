@@ -44,7 +44,7 @@ class CurentUserViewSet(UserViewSet):
     @action(
         detail=False,
         methods=['PUT', 'PATCH', 'DELETE'],
-        permission_classes=(IsAuthenticated(),),
+        permission_classes=(IsAuthenticated,),
         url_path='me/avatar',
     )
     def avatar(self, request):
@@ -71,7 +71,7 @@ class CurentUserViewSet(UserViewSet):
     @action(
         detail=True,
         methods=['POST', 'DELETE'],
-        permission_classes=(IsAuthenticated(),)
+        permission_classes=(IsAuthenticated,)
     )
     def subscribe(self, request, id=None):
         user = request.user
@@ -95,7 +95,7 @@ class CurentUserViewSet(UserViewSet):
     @action(
         detail=False,
         methods=['GET'],
-        permission_classes=(IsAuthenticated(),)
+        permission_classes=(IsAuthenticated,)
     )
     def subscriptions(self, request):
         user = request.user
@@ -149,8 +149,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
             'download_shopping_cart', 'shopping_cart'
         ]
         return (
-            (IsAuthenticated, IsAuthorOrReadOnly,)
-            if self.action in actions else (AllowAny,)
+            (IsAuthenticated(), IsAuthorOrReadOnly(),)
+            if self.action in actions else (AllowAny(),)
         )
 
     def get_queryset(self):
