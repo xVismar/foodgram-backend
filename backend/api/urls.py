@@ -15,5 +15,10 @@ router.register('recipes', RecipeViewSet, basename='recipe')
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('auth/', include('djoser.urls.authtoken'))
+    path('auth/', include('djoser.urls.authtoken')),
+    path(
+        'recipes/<int:pk>/',
+        RecipeViewSet.as_view({'get': 'retrieve'}),
+        name='recipe-detail'
+    )
 ]

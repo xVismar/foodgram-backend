@@ -28,10 +28,15 @@
 - Postgresql
 
 Полный перечень библиотек, модулей и их версии можно посмотреть в `backend/requirements.txt`
-
+API документация к проекту будет доступна по адресу - ``ваш домен/api/docs``
+Пример - [ССЫЛКА](https://foodgram-vismar.ddns.net/api/docs/)
 <br>
 
-# Инструкция по запуску
+<details>
+  <summary><b<strong>Инструкция по развертыванию проекта</strong></b></summary>
+
+### Развертывание проекта
+
 1. Форкнуть репозиторий проекта: xvismar/foodgram на свой аккаунт GitHub
 2. Клонировать форкнутый репозиторий на локальную машину или VM сервер.
 3. В репозитории проекта - Во вкладке ```Settings - Secrets and variables - Actions``` обозначить и сохранить следующие не публичные данные:
@@ -87,7 +92,86 @@ git commit -m "<ваше сообщение коммита>"
 git push
 ```
 
+</details>
 
+<br>
+<details>
+  <summary><b<strong>Локальное развертывание без Docker</strong></b></summary>
+
+
+### Клонировать репозиторий
+```
+
+git clone https://github.com/xVismar/foodgram.git
+cd foodgram
+```
+
+### Установить зависимости
+```
+
+pip install -r backend/requirements.txt
+```
+
+
+### Создать файл окружения
+
+```
+
+cd
+mkdir foodgram/
+cd foodgram
+touch .env
+
+```
+
+### Добавить в файл `.env` следующие переменные:
+
+```
+
+SECRET_KEY # - Секретный ключ Вашего Джанго проекта
+ALLOWED_HOSTS # - Через запятую, без ковычек Ваши разрешенные хосты
+
+```
+
+
+### Определить базовые настройки ``location`` и ``server`` в файле `/etc/nginx/sites-enabled/default`:
+### Пример:
+
+```
+
+server {
+    server_name <IP-адрес вашего сервера> <доменное имя вашего сайта>;
+    location / {
+        proxy_set_header Host $http_host;
+        proxy_pass http://127.0.0.1:8080;
+    }
+}
+
+```
+
+### Применить миграции
+
+```
+
+python manage.py migrate
+
+```
+
+### Создать суперпользователя
+```
+
+python manage.py createsuperuser
+```
+
+### Запустить сервер
+```
+
+python manage.py runserver
+```
+
+</details>
+
+<br>
 # Авторы
 Frontend - [Команда Яндекс Практикума [yandex-praktikum]](https://github.com/yandex-praktikum)
-Backend - [Aлексеев Алексей (Vismar)](https://github.com/xVismar)
+Backend - [Aлексеев Алексей (Vismar)](https://github.com/xVismar)         
