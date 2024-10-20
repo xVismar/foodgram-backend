@@ -4,8 +4,8 @@ import datetime
 def shopping_cart_list(ingredients, cart_recipes):
     today = datetime.datetime.now().strftime('%d-%m-%Y')
     ingredients_info = [
-        f'{i}. {ingredient["ingredient__name"].capitalize()}'
-        f'({ingredient["ingredient__measurement_unit"]}) — '
+        f'{i}. {ingredient["ingredient_name"].capitalize()}'
+        f'({ingredient["ingredient_unit"]}) — '
         f'{ingredient["total_amount"]}'
         for i, ingredient in enumerate(ingredients, start=1)
     ]

@@ -43,17 +43,23 @@ class CurentUserSerializer(UserSerializer):
 
     class Meta(UserSerializer.Meta):
         model = User
-        fields = (
-            'is_subscribed', 'avatar'
-        )
+        fields = UserSerializer.Meta.fields + ('is_subscribed', 'avatar')
 
     def get_is_subscribed(self, author):
         request = self.context.get('request')
         return (
             Subscription.objects.filter(
                 user=request.user, author=author).exists()
-            if (request and request.user.is_authenticated) else False
+            if request and request.user.is_authenticated else False
         )
+
+    def update(self, instance, validated_data):
+        avatar = validated_data.get('avatar', None)
+        if avatar:
+            if instance.avatar:
+                instance.avatar.delete()
+            instance.avatar = avatar
+        return super().update(instance, validated_data)
 
 
 class RecipeSerializer(serializers.ModelSerializer):
@@ -191,7 +197,7 @@ class SubscriptionSerializer(CurentUserSerializer):
     recipes = serializers.SerializerMethodField()
 
     class Meta(CurentUserSerializer.Meta):
-        fields = (
+        fields = CurentUserSerializer.Meta.fields + (
             'recipes_count', 'recipes'
         )
 

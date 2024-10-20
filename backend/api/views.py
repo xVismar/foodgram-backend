@@ -80,7 +80,7 @@ class CurentUserViewSet(UserViewSet):
         )
         if not created:
             raise ValidationError('Вы уже подписаны на этого автора.')
-        recipes_limit = int(request.GET.get('recipes_limit', float('inf')))
+        recipes_limit = int(request.GET.get('recipes_limit', 1000))
         serializer = SubscriptionSerializer(
             author,
             context={'request': request, 'recipes_limit': recipes_limit}
@@ -94,8 +94,8 @@ class CurentUserViewSet(UserViewSet):
     )
     def subscriptions(self, request):
         user = request.user
-        queryset = User.objects.filter(subscribed_to__user=user)
-        recipes_limit = int(request.GET.get('recipes_limit', 0))
+        queryset = User.objects.filter(authors__user=user)
+        recipes_limit = int(request.GET.get('recipes_limit', 1000))
         page = self.paginate_queryset(queryset)
         serializer = SubscriptionSerializer(
             page or queryset,
@@ -220,14 +220,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     )
     def download_shopping_cart(self, request):
-        cart = request.user.shopping_cart.prefetch_related(
-            'recipe__recipeingredient__ingredient'
+        cart = request.user.shoppingcarts.prefetch_related(
+            'recipe__recipeingredients__ingredient'
         ).annotate(
-            ingredient_name=F('recipe__recipeingredient__ingredient__name'),
+            ingredient_name=F('recipe__recipeingredients__ingredient__name'),
             ingredient_unit=F(
-                'recipe__recipeingredient__ingredient__measurement_unit'
+                'recipe__recipeingredients__ingredient__measurement_unit'
             ),
-            total_amount=Sum('recipe__recipeingredient__amount')
+            total_amount=Sum('recipe__recipeingredients__amount')
         ).values(
             'recipe__id',
             'ingredient_name',
