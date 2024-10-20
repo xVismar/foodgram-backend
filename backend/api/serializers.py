@@ -44,26 +44,25 @@ class CurentUserSerializer(UserSerializer):
     class Meta(UserSerializer.Meta):
         model = User
         fields = (
+            'id', 'username', 'first_name', 'last_name', 'email',
             'is_subscribed', 'avatar'
         )
 
     def get_is_subscribed(self, author):
         request = self.context.get('request')
-        if request and request.user.is_authenticated:
-            return (
-                Subscription.objects.filter(
-                    user=request.user, author=author
-                ).exists() if request and request.user.is_authenticated
-                else False
-            )
+        return (
+            Subscription.objects.filter(
+                user=request.user, author=author).exists()
+            if (request and request.user.is_authenticated) else False
+        )
 
-    def update(self, instance, validated_data):
-        avatar = validated_data.get('avatar', None)
-        if avatar:
-            if instance.avatar:
-                instance.avatar.delete()
-            instance.avatar = avatar
-        return super().update(instance, validated_data)
+    # def update(self, instance, validated_data):
+    #     avatar = validated_data.get('avatar', None)
+    #     if avatar:
+    #         if instance.avatar:
+    #             instance.avatar.delete()
+    #         instance.avatar = avatar
+    #     return super().update(instance, validated_data)
 
 
 class RecipeSerializer(serializers.ModelSerializer):
@@ -97,7 +96,7 @@ class RecipeSerializer(serializers.ModelSerializer):
             'cooking_time',
         )
 
-    def validate_related_field(self, field_name, model, validation_message):
+    def related_field_validate(self, field_name, model, validation_message):
         related_data = self.validated_data.get(field_name)
         if not related_data:
             raise serializers.ValidationError(validation_message)
@@ -118,15 +117,15 @@ class RecipeSerializer(serializers.ModelSerializer):
             )
         if errors:
             raise serializers.ValidationError(errors)
-        return related_data
+        return self.validated_data
 
     def validate_ingredients(self, ingredients_data):
-        return self.validate_related_field(
+        return self.related_field_validate(
             'ingredients', Ingredient, 'Нельзя создать рецепт без продуктов.'
         )
 
     def validate_tags(self, tags_data):
-        return self.validate_related_field(
+        return self.related_field_validate(
             'tags', Tag, 'Нельзя создать рецепт без хотя бы одного тэга.'
         )
 
@@ -170,7 +169,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         return (
             model.objects.filter(user=request.user, recipe=recipe).exists() if
-            request and request.user.is_authenticated
+            (request and request.user.is_authenticated)
             else False
         )
 
