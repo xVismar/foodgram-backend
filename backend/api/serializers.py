@@ -41,10 +41,9 @@ class CurentUserSerializer(UserSerializer):
     is_subscribed = serializers.SerializerMethodField()
     avatar = Base64ImageField()
 
-    class Meta:
+    class Meta(UserSerializer.Meta):
         model = User
         fields = (
-            *UserSerializer.Meta.fields,
             'is_subscribed', 'avatar'
         )
 

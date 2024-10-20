@@ -5,21 +5,21 @@ from recipes.models import Recipe
 
 
 class RecipeFilter(FilterSet):
-    is_in_shopping_cart = BooleanFilter(method='filter_is_in_shopping_cart')
-    is_favorited = BooleanFilter(method='filter_is_favorited')
+    is_in_shopping_cart = BooleanFilter(
+        method='user_related_filter',
+        related_field='shoppingcarts'
+    )
+    is_favorited = BooleanFilter(
+        method='user_related_filter',
+        related_field='favorites'
+    )
 
     class Meta:
         model = Recipe
-        fields = ('is_in_shopping_cart', 'is_favorited',)
+        fields = ('is_in_shopping_cart', 'is_favorited')
 
-    def filter_is_in_shopping_cart(self, recipes, name, is_in_shopping_cart):
+    def user_related_filter(self, recipes, name, is_related, related_field):
         user = self.request.user
-        if user.is_authenticated and is_in_shopping_cart:
-            return recipes.filter(carts__user=user)
-        return recipes
-
-    def filter_is_favorited(self, recipes, name, is_favorited):
-        user = self.request.user
-        if user.is_authenticated and is_favorited:
-            return recipes.filter(favorites__user=user)
+        if user.is_authenticated and is_related:
+            return recipes.filter(**{related_field + '__user': user})
         return recipes
