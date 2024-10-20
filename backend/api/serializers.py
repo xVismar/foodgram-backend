@@ -44,7 +44,6 @@ class CurentUserSerializer(UserSerializer):
     class Meta(UserSerializer.Meta):
         model = User
         fields = (
-            'id', 'username', 'first_name', 'last_name', 'email',
             'is_subscribed', 'avatar'
         )
 
@@ -55,14 +54,6 @@ class CurentUserSerializer(UserSerializer):
                 user=request.user, author=author).exists()
             if (request and request.user.is_authenticated) else False
         )
-
-    # def update(self, instance, validated_data):
-    #     avatar = validated_data.get('avatar', None)
-    #     if avatar:
-    #         if instance.avatar:
-    #             instance.avatar.delete()
-    #         instance.avatar = avatar
-    #     return super().update(instance, validated_data)
 
 
 class RecipeSerializer(serializers.ModelSerializer):
@@ -117,7 +108,7 @@ class RecipeSerializer(serializers.ModelSerializer):
             )
         if errors:
             raise serializers.ValidationError(errors)
-        return self.validated_data
+        return related_data
 
     def validate_ingredients(self, ingredients_data):
         return self.related_field_validate(
