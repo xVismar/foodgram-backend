@@ -23,7 +23,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'rest_framework.authtoken',
+    # 'rest_framework.authtoken',
     'rest_framework',
     'djoser',
     'django_filters',
@@ -144,6 +144,7 @@ MAX_STR_LENGTH = 55
 MAX_TAG_LENGTH = 32
 MAX_RECIPE_NAME_LENGTH = 256
 MAX_INGREDIENT_NAME_LENGTH = 128
+MIN_AMOUNT_INGREDIENT = 1
 MAX_MEASUREMENT_UNIT_LENGTH = 64
 MAX_AMOUNT_COOK_TIME = 32000
 MIN_AMOUNT_COOK_TIME_INGREDIENT = 1

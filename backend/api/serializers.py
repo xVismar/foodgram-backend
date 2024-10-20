@@ -1,9 +1,10 @@
+from collections import Counter
+
 from django.db import transaction
 from djoser.serializers import UserSerializer
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 
-from api.services import get_data_set, RecipeMiniSerializer
 from recipes.models import (
     Favorite, Ingredient, Recipe, RecipeIngredient, ShoppingCart,
     Subscription, Tag, User
@@ -40,20 +41,22 @@ class CurentUserSerializer(UserSerializer):
     is_subscribed = serializers.SerializerMethodField()
     avatar = Base64ImageField()
 
-    class Meta(UserSerializer.Meta):
+    class Meta:
         model = User
         fields = (
-            'id', 'username', 'first_name', 'last_name', 'email',
+            *UserSerializer.Meta.fields,
             'is_subscribed', 'avatar'
         )
 
     def get_is_subscribed(self, author):
         request = self.context.get('request')
         if request and request.user.is_authenticated:
-            return Subscription.objects.filter(
-                user=request.user, author=author
-            ).exists()
-        return False
+            return (
+                Subscription.objects.filter(
+                    user=request.user, author=author
+                ).exists() if request and request.user.is_authenticated
+                else False
+            )
 
     def update(self, instance, validated_data):
         avatar = validated_data.get('avatar', None)
@@ -95,54 +98,57 @@ class RecipeSerializer(serializers.ModelSerializer):
             'cooking_time',
         )
 
-    def validate_ingredients(self, ingredients_data):
-        if not ingredients_data:
-            raise serializers.ValidationError(
-                'Нельзя создать рецепт без продуктов.'
-            )
-        ingredients_id_set = get_data_set(ingredients_data)
-        for id in ingredients_id_set:
-            if not Ingredient.objects.filter(id=id).exists():
-                raise serializers.ValidationError(
-                    'Такого продукта не существует.'
+    def validate_related_field(self, field_name, model, validation_message):
+        related_data = self.validated_data.get(field_name)
+        if not related_data:
+            raise serializers.ValidationError(validation_message)
+        id_set = set(item['id'] for item in related_data)
+        errors = []
+        for id in id_set:
+            if not model.objects.filter(id=id).exists():
+                errors.append(
+                    f'{field_name.capitalize()} с ID [{id}] не найден.'
                 )
-        return ingredients_data
+        duplicates = [
+            id for id, count in Counter(id_set).items() if count > 1
+        ]
+        if duplicates:
+            errors.append(
+                f'Обнаружен дублированный {field_name.capitalize()} с ID: '
+                f'{duplicates}.'
+            )
+        if errors:
+            raise serializers.ValidationError(errors)
+        return related_data
+
+    def validate_ingredients(self, ingredients_data):
+        return self.validate_related_field(
+            'ingredients', Ingredient, 'Нельзя создать рецепт без продуктов.'
+        )
 
     def validate_tags(self, tags_data):
-        if not tags_data:
-            raise serializers.ValidationError(
-                'Нелья создать рецепт без добавления хотя бы однго тэга.'
-            )
-        tags_id_set = get_data_set(tags_data)
-        for id in tags_id_set:
-            if not Tag.objects.filter(id=id).exists():
-                raise serializers.ValidationError(
-                    'Такого тэга не существует.'
-                )
-        return tags_data
+        return self.validate_related_field(
+            'tags', Tag, 'Нельзя создать рецепт без хотя бы одного тэга.'
+        )
 
     def recipe_ingredients_create(self, recipe, ingredients_data):
         RecipeIngredient.objects.bulk_create(
-            [
-                RecipeIngredient(
-                    recipe=recipe,
-                    ingredient_id=ingredient_data['ingredient']['id'],
-                    amount=ingredient_data['amount']
-                )
-                for ingredient_data in ingredients_data
-            ]
+            RecipeIngredient(
+                recipe=recipe,
+                ingredient_id=ingredient_data['ingredient']['id'],
+                amount=ingredient_data['amount']
+            )
+            for ingredient_data in ingredients_data
         )
 
     @transaction.atomic
     def create(self, validated_data):
         ingredients_data = validated_data.pop('recipeingredients')
         tags_data = validated_data.pop('tags')
-        image_data = validated_data.pop('image')
-        recipe = Recipe.objects.create(**validated_data)
-        recipe.image.save(image_data.name, image_data, save=True)
-        self.recipe_ingredients_create(recipe, ingredients_data)
-        recipe.tags.set(tags_data)
-        return recipe
+        validated_data = super().create(validated_data)
+        self.recipe_ingredients_create(validated_data, ingredients_data)
+        validated_data.tags.set(tags_data)
+        return validated_data
 
     @transaction.atomic
     def update(self, instance, validated_data):
@@ -184,6 +190,13 @@ class RecipeSerializer(serializers.ModelSerializer):
         )
 
 
+class RecipeMiniSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Recipe
+        fields = ('id', 'name', 'image', 'cooking_time')
+
+
 class SubscriptionSerializer(CurentUserSerializer):
     recipes_count = serializers.SerializerMethodField()
     recipes = serializers.SerializerMethodField()
@@ -194,9 +207,7 @@ class SubscriptionSerializer(CurentUserSerializer):
         )
 
     def get_recipes(self, user):
-        return RecipeMiniSerializer(
-            user.recipes.all()[:float('inf')], many=True
-        ).data
+        return RecipeMiniSerializer(user.recipes.all(), many=True).data
 
     def get_recipes_count(self, user):
         return user.recipes.count()

@@ -1,37 +1,56 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.forms import CheckboxSelectMultiple
 from django.urls import reverse
-from django.utils.safestring import mark_safe
 from django.utils.html import format_html
-from api.filters import CookingTimeFilter
+from django.utils.safestring import mark_safe
 
 from recipes.models import (
     Favorite, Ingredient, Recipe, RecipeIngredient, ShoppingCart, Subscription,
-    Tag, User, RecipeTag
+    Tag, User
 )
 
 
-def format_tags(func):
+class CookingTimeFilter(admin.SimpleListFilter):
+    title = 'Время готовки'
+    parameter_name = 'cooking_time'
 
-    def wrapper(self, recipe):
-        tags = func(self, recipe)
-        return format_html('<br>'.join(tags))
-    return wrapper
+    THRESHOLDS = {
+        'Быстро': (0, 30),
+        'Средне': (30, 60),
+        'Долго': (60, float('inf')),
+    }
 
+    def lookups(self, request, model):
+        queryset = model.get_queryset(request)
+        counts = queryset.values('cooking_time').annotate(
+            total=models.Count('id')
+        )
+        cooking_time_ranges = set()
+        lookups = []
+        for count in counts:
+            cooking_time = count['cooking_time']
+            total = count['total']
+            for name, (min_time, max_time) in self.THRESHOLDS.items():
+                if (
+                    min_time <= cooking_time < max_time
+                    and name not in cooking_time_ranges
+                ):
+                    lookups.append(
+                        (
+                            f'{name.capitalize()} ({total})',
+                            f'{min_time} - {max_time} минут'
+                        )
+                    )
+                    cooking_time_ranges.add(name)
+                    break
+        return lookups
 
-def set_short_description(description):
-    def decorator(func):
-        func.short_description = description
-        return func
-    return decorator
-
-
-def allow_tags(func):
-    func.allow_tags = True
-    return func
+    def queryset(self, request, queryset):
+        if self.value():
+            min_time, max_time = map(int, self.value().split('-'))
+            return queryset.filter(cooking_time__range=[min_time, max_time])
 
 
 class RecipeIngredientInline(admin.TabularInline):
@@ -39,14 +58,16 @@ class RecipeIngredientInline(admin.TabularInline):
     extra = 0
 
     def ingredient_info(self, recipeingredient):
-        ingredient = Ingredient.objects.get(id=recipeingredient.ingredient_id)
-        return f'{ingredient.name} ({ingredient.measurement_unit})'
-
+        ingredient = recipeingredient.ingredient
+        return (
+            f'{ingredient.name} ({ingredient.measurement_unit}) - '
+            f'{recipeingredient.amount}'
+        )
     readonly_fields = ["ingredient_info"]
 
 
-class TagInline(admin.TabularInline):
-    model = RecipeTag
+class RecipeTagInline(admin.TabularInline):
+    model = Recipe.tags.through
     extra = 0
 
 
@@ -62,6 +83,7 @@ class RecipeAdmin(admin.ModelAdmin):
         'author',
         'favorite_count',
         'get_tags',
+        'get_ingredients',
         'image',
         'cooking_time'
     )
@@ -76,7 +98,7 @@ class RecipeAdmin(admin.ModelAdmin):
         'author',
         CookingTimeFilter,
     ]
-    inlines = [RecipeIngredientInline, TagInline, FavoriteInline]
+    inlines = [RecipeIngredientInline, RecipeTagInline, FavoriteInline, ]
     fieldsets = (
         (None, {'fields': ('name', 'author', )}),
         ('Описание', {'fields': ('text', 'cooking_time', 'image')}),
@@ -102,15 +124,20 @@ class RecipeAdmin(admin.ModelAdmin):
         models.ManyToManyField: {'widget': CheckboxSelectMultiple},
     }
 
-    @set_short_description('В избранном')
-    def favorite_count(self, recipe):
-        return recipe.favorites.all().count()
+    @admin.display(description='Продукты')
+    def get_ingredients(self, recipe):
+        ingredients = recipe.recipeingredients.values_list(
+            'ingredient__name', flat=True
+        )
+        return ', '.join(ingredients)
 
-    @allow_tags
-    @set_short_description('Теги')
-    @format_tags
+    @admin.display(description='В избранном')
+    def favorite_count(self, recipe):
+        return recipe.favorites.count()
+
+    @admin.display(description='Теги')
     def get_tags(self, recipe):
-        return recipe.tags.values_list('name', flat=True).order_by('name')
+        return recipe.tags.name
 
 
 @admin.register(Ingredient)
@@ -121,7 +148,9 @@ class IngredientAdmin(admin.ModelAdmin):
     )
     search_fields = [
         'name',
+        'measurement_unit',
     ]
+    list_filter = ['measurement_unit']
 
 
 @admin.register(Tag)
@@ -186,65 +215,54 @@ class UserAdmin(UserAdmin):
         ),
     )
     ordering = ('username',)
-    readonly_fields = ('get_subscriptions', 'get_recipes',
-                       'get_favorited_recipes')
+    readonly_fields = (
+        'get_subscriptions', 'get_recipes', 'get_favorited_recipes'
+    )
 
-    @set_short_description('Подписки')
+    def get_queryset(self, request):
+        return (
+            super().get_queryset(request).filter(
+                recipes__isnull=False).distinct()
+        )
+
+    @staticmethod
+    def generate_link(user, description, url_name, field_name):
+        count = getattr(user, field_name).count()
+        if count > 0:
+            return format_html(
+                '<a href="{}?{}__id__exact={}">{count} {description}</a>',
+                reverse('admin:' + url_name),
+                'author',
+                user.id,
+                count=count,
+                description=description
+            )
+        return 0
+
+    link_data = {
+        'Подписки': ('recipes_subscription_changelist', 'authors'),
+        'Рецепты': ('recipes_recipe_changelist', 'recipes'),
+        'Избранные рецепты': ('recipes_favorite_changelist', 'favorites')
+    }
+
+    @mark_safe
+    @admin.display(description='Подписки')
     def get_subscriptions(self, user):
-        custom_user_ct = ContentType.objects.get_for_model(User)
-        app_label = custom_user_ct.app_label
-        model_name = custom_user_ct.model
-        subscriptions = user.authors.all()
-        if subscriptions.exists():
-            return mark_safe(
-                '<br>'.join([
-                    f'''<a href='{
-                    reverse(f'admin:{app_label}_{model_name}_change',
-                            args=[sub.author.id])
-                    }'>'''
-                    f'{sub.author.username}</a>'
-                    for sub in subscriptions
-                ])
-            )
-        return 'Нет подписок'
+        return self.generate_link(
+            user, 'подписок', *self.link_data['Подписки']
+        )
 
-    @set_short_description('Рецепты')
+    @mark_safe
+    @admin.display(description='Рецепты')
     def get_recipes(self, user):
-        recipe_ct = ContentType.objects.get_for_model(Recipe)
-        app_label = recipe_ct.app_label
-        model_name = recipe_ct.model
-        recipes = user.recipes.all()
-        if recipes.exists():
-            return mark_safe(
-                '<br>'.join([
-                    f'''<a href='{
-                    reverse(f'admin:{app_label}_{model_name}_change',
-                            args=[recipe.id])
-                    }'>'''
-                    f'{recipe.name}</a>'
-                    for recipe in recipes
-                ])
-            )
-        return 'Нет рецептов'
+        return self.generate_link(user, 'рецепт', *self.link_data['Рецепты'])
 
-    @set_short_description('Избранные рецепты')
+    @mark_safe
+    @admin.display(description='Избранные рецепты')
     def get_favorited_recipes(self, user):
-        recipe_ct = ContentType.objects.get_for_model(Favorite)
-        app_label = recipe_ct.app_label
-        model_name = recipe_ct.model
-        favorited_recipes = user.favorites.all()
-        if favorited_recipes.exists():
-            return mark_safe(
-                '<br>'.join([
-                    f'''<a href='{
-                    reverse(f'admin:{app_label}_{model_name}_change',
-                            args=[favorited_recipe.id])
-                    }'>'''
-                    f'{favorited_recipe.recipe.name}</a>'
-                    for favorited_recipe in favorited_recipes
-                ])
-            )
-        return 'Нет избранных рецептов'
+        return self.generate_link(
+            user, 'избранных рецептов', *self.link_data['Избранные рецепты']
+        )
 
 
 @admin.register(Subscription)
