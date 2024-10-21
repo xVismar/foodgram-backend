@@ -137,11 +137,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
     search_fields = ('tags__slug',)
     permission_classes = (AllowAny,)
     permission_classes = {
-        'create': [IsAuthenticated(), IsAuthorOrReadOnly()],
-        'update': [IsAuthenticated(), IsAuthorOrReadOnly()],
-        'partial_update': [IsAuthenticated(), IsAuthorOrReadOnly()],
-        'destroy': [IsAuthenticated(), IsAuthorOrReadOnly()],
-        'default': [AllowAny()],
+        'create': [IsAuthenticated, IsAuthorOrReadOnly],
+        'update': [IsAuthenticated, IsAuthorOrReadOnly],
+        'partial_update': [IsAuthenticated, IsAuthorOrReadOnly],
+        'destroy': [IsAuthenticated, IsAuthorOrReadOnly],
+        'default': [AllowAny],
     }
 
     def get_queryset(self):
