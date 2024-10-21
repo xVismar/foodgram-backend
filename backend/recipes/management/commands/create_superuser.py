@@ -40,7 +40,9 @@ class Command(BaseCommand):
                     )
                 )
             else:
-                created_users.append(User.objects.create_user(**user_data))
+                created_users.append(
+                    User.objects.create_superuser(**user_data)
+                )
         if created_users:
             self.stdout.write(
                 self.style.SUCCESS(

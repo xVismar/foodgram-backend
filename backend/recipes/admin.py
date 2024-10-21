@@ -24,7 +24,7 @@ class CookingTimeFilter(admin.SimpleListFilter):
     def lookups(self, request, model):
         cooking_time_counts = {}
         for name, (min_time, max_time) in self.THRESHOLDS.items():
-            count = model.filter(
+            count = Recipe.objects.filter(
                 cooking_time__range=[min_time, max_time]
             ).count()
             cooking_time_counts[name] = count
