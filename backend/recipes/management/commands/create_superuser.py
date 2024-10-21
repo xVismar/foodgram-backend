@@ -7,30 +7,43 @@ User = get_user_model()
 
 
 class Command(BaseCommand):
-    help = 'Создание суперпользователя с параметрами из окружения.'
+    help = 'Создание суперпользователей с параметрами из окружения.'
 
     def handle(self, *args, **options):
-        username = os.getenv('SUPERUSER_USERNAME', 'admin')
-        email = os.getenv('SUPERUSER_EMAIL', 'admin@example.com')
-        password = os.getenv('SUPERUSER_PASSWORD', 'adminpassword')
-        first_name = os.getenv('SUPERUSER_FIRST_NAME', 'Admin')
-        last_name = os.getenv('SUPERUSER_LAST_NAME', 'User')
-        if User.objects.filter(username=username).exists():
-            self.stdout.write(
-                self.style.WARNING(
-                    f'Суперпользователь {username} уже существует.'
+        users_data = [
+            {
+                'username': os.getenv('SUPERUSER_USERNAME', 'admin'),
+                'email': os.getenv('SUPERUSER_EMAIL', 'admin@example.com'),
+                'first_name': os.getenv('SUPERUSER_FIRST_NAME', 'Admin'),
+                'last_name': os.getenv('SUPERUSER_LAST_NAME', 'User'),
+                'password': os.getenv('SUPERUSER_PASSWORD', 'adminpassword'),
+                'is_superuser': True,
+                'is_staff': True,
+            },
+            {
+                'username': 'review',
+                'email': 'review@admin.ru',
+                'first_name': 'Ревьюер',
+                'last_name': 'Практикум',
+                'password': 'review1admin',
+                'is_superuser': True,
+                'is_staff': True,
+            },
+        ]
+        created_users = []
+        for user_data in users_data:
+            username = user_data['username']
+            if User.objects.filter(username=username).exists():
+                self.stdout.write(
+                    self.style.WARNING(
+                        f'Пользователь {username} уже существует.'
+                    )
                 )
-            )
-        else:
-            User.objects.create_superuser(
-                username=username,
-                email=email,
-                password=password,
-                first_name=first_name,
-                last_name=last_name
-            )
+            else:
+                created_users.append(User.objects.create_user(**user_data))
+        if created_users:
             self.stdout.write(
                 self.style.SUCCESS(
-                    f'Суперпользователь {username} создан успешно.'
+                    'СуперПользователи созданы успешно.'
                 )
             )

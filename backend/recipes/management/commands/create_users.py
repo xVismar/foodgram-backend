@@ -32,13 +32,6 @@ users_data = [
         'last_name': 'Смирнова',
         'password': 'mysecretpass123'
     },
-    {
-        'username': 'review',
-        'email': 'review@admin.ru',
-        'first_name': 'Ревьюер',
-        'last_name': 'Практикум',
-        'password': 'review1admin'
-    }
 ]
 
 
