@@ -1,9 +1,9 @@
-﻿from django.conf import settings
-from django.contrib.auth.models import AbstractUser
+﻿from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.db.models import UniqueConstraint
 
+
+import recipes.constants as CONST
 from recipes.validators import validate_username
 
 
@@ -11,22 +11,22 @@ class User(AbstractUser):
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
     email = models.EmailField(
-        max_length=settings.MAX_EMAIL_LENGTH,
+        max_length=CONST.MAX_EMAIL_LENGTH,
         unique=True,
         verbose_name='Почта'
     )
     username = models.CharField(
-        max_length=settings.MAX_STR_LENGTH,
+        max_length=CONST.MAX_STR_LENGTH,
         unique=True,
         validators=[validate_username],
         verbose_name='Ник',
     )
     first_name = models.CharField(
-        max_length=settings.MAX_STR_LENGTH,
+        max_length=CONST.MAX_STR_LENGTH,
         verbose_name='Имя'
     )
     last_name = models.CharField(
-        max_length=settings.MAX_STR_LENGTH,
+        max_length=CONST.MAX_STR_LENGTH,
         verbose_name='Фамилия'
     )
     avatar = models.ImageField(
@@ -42,7 +42,7 @@ class User(AbstractUser):
         verbose_name_plural = 'Пользователи'
 
     def __str__(self):
-        return self.username[:settings.MAX_STR_LENGTH]
+        return self.username[:CONST.MAX_STR_LENGTH]
 
     @property
     def number_of_recipes(self):
@@ -73,7 +73,7 @@ class Subscription(models.Model):
 
     class Meta:
         constraints = [
-            UniqueConstraint(
+            models.UniqueConstraint(
                 fields=['user', 'author'],
                 name='unique_subscribers'
             )
@@ -89,12 +89,12 @@ class Subscription(models.Model):
 
 class Tag(models.Model):
     name = models.CharField(
-        max_length=settings.MAX_TAG_LENGTH,
+        max_length=CONST.MAX_TAG_LENGTH,
         unique=True,
         verbose_name='Название'
     )
     slug = models.SlugField(
-        max_length=settings.MAX_TAG_LENGTH,
+        max_length=CONST.MAX_TAG_LENGTH,
         unique=True,
         verbose_name='Идентификатор',
     )
@@ -105,16 +105,16 @@ class Tag(models.Model):
         verbose_name_plural = 'Тэги'
 
     def __str__(self):
-        return self.name[:settings.MAX_STR_LENGTH]
+        return self.name[:CONST.MAX_STR_LENGTH]
 
 
 class Ingredient(models.Model):
     name = models.CharField(
-        max_length=settings.MAX_INGREDIENT_NAME_LENGTH,
+        max_length=CONST.MAX_INGREDIENT_NAME_LENGTH,
         verbose_name='Название'
     )
     measurement_unit = models.CharField(
-        max_length=settings.MAX_MEASUREMENT_UNIT_LENGTH,
+        max_length=CONST.MAX_MEASUREMENT_UNIT_LENGTH,
         verbose_name='Единица измерения'
     )
 
@@ -130,7 +130,7 @@ class Ingredient(models.Model):
         verbose_name_plural = 'Продукты'
 
     def __str__(self):
-        return self.name[:settings.MAX_STR_LENGTH]
+        return self.name[:CONST.MAX_STR_LENGTH]
 
 
 class Recipe(models.Model):
@@ -140,15 +140,15 @@ class Recipe(models.Model):
         verbose_name='Автор'
     )
     name = models.CharField(
-        max_length=settings.MAX_RECIPE_NAME_LENGTH,
+        max_length=CONST.MAX_RECIPE_NAME_LENGTH,
         verbose_name='Название'
     )
     image = models.ImageField(
         upload_to='recipes/',
-        verbose_name='Изображение рецепта'
+        verbose_name='Изображение'
     )
     text = models.TextField(
-        verbose_name='Описание рецепта'
+        verbose_name='Описание'
     )
     ingredients = models.ManyToManyField(
         Ingredient,
@@ -162,10 +162,10 @@ class Recipe(models.Model):
     cooking_time = models.PositiveIntegerField(
         validators=[
             MinValueValidator(
-                settings.MIN_AMOUNT_COOK_TIME_INGREDIENT,
+                CONST.MIN_AMOUNT_COOK_TIME_INGREDIENT,
                 (
                     'Время приготовления не может быть меньше '
-                    f'{settings.MIN_AMOUNT_COOK_TIME_INGREDIENT}'
+                    f'{CONST.MIN_AMOUNT_COOK_TIME_INGREDIENT}'
                 )
             )
         ],
@@ -184,7 +184,7 @@ class Recipe(models.Model):
         ordering = ('-created_at',)
 
     def __str__(self):
-        return self.name[:settings.MAX_STR_LENGTH]
+        return self.name[:CONST.MAX_STR_LENGTH]
 
 
 class RecipeIngredient(models.Model):
@@ -201,8 +201,8 @@ class RecipeIngredient(models.Model):
     amount = models.PositiveSmallIntegerField(
         validators=[
             MinValueValidator(
-                settings.MIN_AMOUNT_INGREDIENT,
-                f'Мера не может быть меньше {settings.MIN_AMOUNT_INGREDIENT}'
+                CONST.MIN_AMOUNT_INGREDIENT,
+                f'Мера не может быть меньше {CONST.MIN_AMOUNT_INGREDIENT}'
             )
         ],
         verbose_name='Мера'
@@ -243,7 +243,7 @@ class UserRecipeBaseModel(models.Model):
         default_related_name = '%(class)ss'
         constraints = [
             models.UniqueConstraint(
-                name='unique_%(class)ss_constraint',
+                name='unique_%(class)s_constraint',
                 fields=['user', 'recipe']
             )
         ]

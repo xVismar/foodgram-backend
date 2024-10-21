@@ -1,8 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db.models import Exists, F, OuterRef, Sum
 from django.http import FileResponse
-from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet
 from rest_framework import filters, status, viewsets
@@ -75,15 +74,18 @@ class CurentUserViewSet(UserViewSet):
             raise ValidationError('Вы не можете подписаться на себя.')
         if request.method == 'DELETE':
             get_object_or_404(Subscription, user=user, author=author).delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
         _, created = Subscription.objects.get_or_create(
             user=user, author=author
         )
         if not created:
             raise ValidationError('Вы уже подписаны на этого автора.')
-        recipes_limit = int(request.GET.get('recipes_limit', 1000))
         serializer = SubscriptionSerializer(
             author,
-            context={'request': request, 'recipes_limit': recipes_limit}
+            context={
+                'request': request,
+                'recipes_limit': int(request.GET.get('recipes_limit', 10**10))
+            }
         )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -95,12 +97,14 @@ class CurentUserViewSet(UserViewSet):
     def subscriptions(self, request):
         user = request.user
         queryset = User.objects.filter(authors__user=user)
-        recipes_limit = int(request.GET.get('recipes_limit', 1000))
         page = self.paginate_queryset(queryset)
         serializer = SubscriptionSerializer(
             page or queryset,
             many=True,
-            context={'request': request, 'recipes_limit': recipes_limit},
+            context={
+                'request': request,
+                'recipes_limit': int(request.GET.get('recipes_limit', 10**10))
+            },
         )
         return (
             self.get_paginated_response(serializer.data) if page is not None
@@ -132,16 +136,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
     filterset_class = RecipeFilter
     search_fields = ('tags__slug',)
     permission_classes = (AllowAny,)
-
-    def get_permissions(self):
-        actions = [
-            'create', 'update', 'partial_update', 'destroy', 'favorite',
-            'download_shopping_cart', 'shopping_cart'
-        ]
-        return (
-            (IsAuthenticated(), IsAuthorOrReadOnly(),)
-            if self.action in actions else (AllowAny(),)
-        )
+    permission_classes = {
+        'create': [IsAuthenticated(), IsAuthorOrReadOnly()],
+        'update': [IsAuthenticated(), IsAuthorOrReadOnly()],
+        'partial_update': [IsAuthenticated(), IsAuthorOrReadOnly()],
+        'destroy': [IsAuthenticated(), IsAuthorOrReadOnly()],
+        'default': [AllowAny()],
+    }
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -165,7 +166,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         serializer.save(author=self.request.user)
 
     @staticmethod
-    def handle_cart_actions(request, pk, model):
+    def manage_recipe_in_cart(request, pk, model):
         user = request.user
         recipe = get_object_or_404(Recipe, pk=pk)
         if request.method == 'DELETE':
@@ -175,7 +176,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if not created:
             raise ValueError(
                 f'Ошибка добавления рецепта {recipe.name} для пользователя '
-                f'{user.username} - рецепт уже в корзине.'
+                f'{user.username}. Рецепт уже был добавлен'
             )
         return Response(
             RecipeMiniSerializer(recipe).data, status=status.HTTP_201_CREATED
@@ -185,20 +186,20 @@ class RecipeViewSet(viewsets.ModelViewSet):
         detail=True,
         methods=['POST', 'DELETE'],
         url_path='shopping_cart',
-        permission_classes=(IsAuthenticated, IsAuthorOrReadOnly)
+        permission_classes=(IsAuthenticated,)
     )
     def shopping_cart(self, request, pk=None):
-        return self.handle_cart_actions(request, pk, ShoppingCart)
+        return self.manage_recipe_in_cart(request, pk, ShoppingCart)
 
     @action(
         detail=True,
         methods=['POST', 'DELETE'],
         url_path='favorite',
-        permission_classes=(IsAuthenticated, IsAuthorOrReadOnly)
+        permission_classes=(IsAuthenticated,)
 
     )
     def favorite(self, request, pk=None):
-        return self.handle_cart_actions(request, pk, Favorite)
+        return self.manage_recipe_in_cart(request, pk, Favorite)
 
     @action(
         detail=True,
@@ -216,8 +217,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         detail=False,
         methods=['GET'],
         url_path='download_shopping_cart',
-        permission_classes=(IsAuthenticated, IsAuthorOrReadOnly)
-
+        permission_classes=(IsAuthenticated,)
     )
     def download_shopping_cart(self, request):
         cart = request.user.shoppingcarts.prefetch_related(
@@ -239,7 +239,3 @@ class RecipeViewSet(viewsets.ModelViewSet):
             shopping_cart_list(cart, cart_recipes),
             content_type='text/plain; charset=utf-8'
         )
-
-
-def redirect_short_link(request, short_id):
-    return redirect(reverse('recipe-detail', args=[short_id]))

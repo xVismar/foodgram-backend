@@ -9,11 +9,11 @@ def shopping_cart_list(ingredients, cart_recipes):
         f'{ingredient["total_amount"]}'
         for i, ingredient in enumerate(ingredients, start=1)
     ]
-    recipe_names = '\n'.join([f'- {recipe.name}' for recipe in cart_recipes])
+    recipe_names = [f'- {recipe.name}' for recipe in cart_recipes]
     shopping_list = '\n'.join([
         f'Дата составления списка покупок: {today}',
         'Для приготовления следующих рецептов:',
-        recipe_names,
+        *recipe_names,
         'Вам потребуется купить продуктов:',
         *ingredients_info
     ])

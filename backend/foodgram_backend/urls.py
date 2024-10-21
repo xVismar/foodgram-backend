@@ -1,9 +1,13 @@
 
 from django.contrib import admin
-from django.urls import include, path
+from django.shortcuts import redirect
+from django.urls import include, path, reverse
 from django.views.generic import RedirectView
 
-from api.views import redirect_short_link, RecipeViewSet
+
+def redirect_short_link(request, short_id):
+    return redirect(reverse('api:recipe-detail', args=[short_id]))
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -19,9 +23,4 @@ urlpatterns = [
         RedirectView.as_view(url='/static/pages/technologies/index.html'),
         name='Технологии'
     ),
-    path(
-        'recipes/<int:pk>/',
-        RecipeViewSet.as_view({'get': 'retrieve'}),
-        name='recipe-detail'
-    )
 ]

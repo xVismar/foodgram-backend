@@ -6,10 +6,9 @@ from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
-from recipes.models import (
-    Favorite, Ingredient, Recipe, RecipeIngredient, ShoppingCart, Subscription,
-    Tag, User
-)
+from recipes.constants import COOK_TIME_LONG, COOK_TIME_QUICK
+from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
+                            ShoppingCart, Subscription, Tag, User)
 
 
 class CookingTimeFilter(admin.SimpleListFilter):
@@ -17,40 +16,33 @@ class CookingTimeFilter(admin.SimpleListFilter):
     parameter_name = 'cooking_time'
 
     THRESHOLDS = {
-        'Быстро': (0, 30),
-        'Средне': (30, 60),
-        'Долго': (60, float('inf')),
+        'Быстро': (0, (COOK_TIME_QUICK - 1)),
+        'Средне': (COOK_TIME_QUICK, (COOK_TIME_LONG - 1)),
+        'Долго': (COOK_TIME_LONG, COOK_TIME_LONG**5),
     }
 
     def lookups(self, request, model):
-        queryset = model.get_queryset(request)
-        counts = queryset.values('cooking_time').annotate(
-            total=models.Count('id')
-        )
-        cooking_time_ranges = set()
-        lookups = []
-        for count in counts:
-            cooking_time = count['cooking_time']
-            total = count['total']
-            for name, (min_time, max_time) in self.THRESHOLDS.items():
-                if (
-                    min_time <= cooking_time < max_time
-                    and name not in cooking_time_ranges
-                ):
-                    lookups.append(
-                        (
-                            f'{name.capitalize()} ({total})',
-                            f'{min_time} - {max_time} минут'
-                        )
-                    )
-                    cooking_time_ranges.add(name)
-                    break
-        return lookups
+        cooking_time_counts = {}
+        for name, (min_time, max_time) in self.THRESHOLDS.items():
+            count = model.objects.filter(
+                cooking_time__range=[min_time, max_time]
+            ).count()
+            cooking_time_counts[name] = count
+        return [
+            (
+                f'{name.capitalize()} ({count})',
+                f'{min_time} - {max_time} минут'
+            ) for name, (min_time, max_time), count in zip(
+                self.THRESHOLDS.keys(),
+                self.THRESHOLDS.values(),
+                cooking_time_counts.values()
+            )
+        ]
 
     def queryset(self, request, queryset):
         if self.value():
             min_time, max_time = map(int, self.value().split('-'))
-            return queryset.filter(cooking_time__range=[min_time, max_time])
+            return queryset.filter(cooking_time__range=(min_time, max_time))
 
 
 class RecipeIngredientInline(admin.TabularInline):
@@ -124,20 +116,25 @@ class RecipeAdmin(admin.ModelAdmin):
         models.ManyToManyField: {'widget': CheckboxSelectMultiple},
     }
 
-    @admin.display(description='Продукты')
+    @admin.display(description='Продукты с Е.И. и мерой')
+    @mark_safe
     def get_ingredients(self, recipe):
-        ingredients = recipe.recipeingredients.values_list(
-            'ingredient__name', flat=True
-        )
-        return ', '.join(ingredients)
+        ingredients = recipe.recipeingredients.all()
+        ingredients_info = [
+            f'{ingredient.ingredient.name} '
+            f'({ingredient.ingredient.measurement_unit}) - {ingredient.amount}'
+            for ingredient in ingredients
+        ]
+        return '<br>'.join(ingredients_info)
 
     @admin.display(description='В избранном')
     def favorite_count(self, recipe):
         return recipe.favorites.count()
 
     @admin.display(description='Теги')
+    @mark_safe
     def get_tags(self, recipe):
-        return recipe.tags.name
+        return '<br>'.join(tag.name for tag in recipe.tags.all())
 
 
 @admin.register(Ingredient)

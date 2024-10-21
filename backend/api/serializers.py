@@ -43,14 +43,15 @@ class CurentUserSerializer(UserSerializer):
 
     class Meta(UserSerializer.Meta):
         model = User
-        fields = UserSerializer.Meta.fields + ('is_subscribed', 'avatar')
+        fields = (*UserSerializer.Meta.fields, 'is_subscribed', 'avatar')
 
     def get_is_subscribed(self, author):
         request = self.context.get('request')
         return (
-            Subscription.objects.filter(
-                user=request.user, author=author).exists()
-            if request and request.user.is_authenticated else False
+            (request and request.user.is_authenticated)
+            and Subscription.objects.filter(
+                user=request.user, author=author
+            ).exists()
         )
 
     def update(self, instance, validated_data):
@@ -102,14 +103,14 @@ class RecipeSerializer(serializers.ModelSerializer):
         for id in id_set:
             if not model.objects.filter(id=id).exists():
                 errors.append(
-                    f'{field_name.capitalize()} с ID [{id}] не найден.'
+                    f'{field_name} с ID [{id}] не найден.'
                 )
         duplicates = [
             id for id, count in Counter(id_set).items() if count > 1
         ]
         if duplicates:
             errors.append(
-                f'Обнаружен дублированный {field_name.capitalize()} с ID: '
+                f'Обнаружен дублированный {field_name} с ID: '
                 f'{duplicates}.'
             )
         if errors:
@@ -165,9 +166,8 @@ class RecipeSerializer(serializers.ModelSerializer):
     def check_relation(self, user, recipe, model):
         request = self.context.get('request')
         return (
-            model.objects.filter(user=request.user, recipe=recipe).exists() if
             (request and request.user.is_authenticated)
-            else False
+            and model.objects.filter(user=request.user, recipe=recipe).exists()
         )
 
     def get_is_favorited(self, recipe):
@@ -197,8 +197,8 @@ class SubscriptionSerializer(CurentUserSerializer):
     recipes = serializers.SerializerMethodField()
 
     class Meta(CurentUserSerializer.Meta):
-        fields = CurentUserSerializer.Meta.fields + (
-            'recipes_count', 'recipes'
+        fields = (
+            *CurentUserSerializer.Meta.fields, 'recipes_count', 'recipes'
         )
 
     def get_recipes(self, user):
