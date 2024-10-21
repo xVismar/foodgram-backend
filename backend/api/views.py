@@ -139,7 +139,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         return (
-
             (AllowAny(),) if self.request.method in SAFE_METHODS
             else super().get_permissions()
         )
