@@ -48,7 +48,7 @@ class CurentUserSerializer(UserSerializer):
     def get_is_subscribed(self, author):
         request = self.context.get('request')
         return (
-            (request and request.user.is_authenticated)
+            request and request.user.is_authenticated
             and Subscription.objects.filter(
                 user=request.user, author=author
             ).exists()
@@ -99,19 +99,20 @@ class RecipeSerializer(serializers.ModelSerializer):
         if not related_data:
             raise serializers.ValidationError(validation_message)
         id_set = set(item['id'] for item in related_data)
-        errors = []
-        for id in id_set:
-            if not model.objects.filter(id=id).exists():
-                errors.append(
-                    f'{field_name} с ID [{id}] не найден.'
-                )
+        errors = [
+            f'{field_name} с ID [{id}] не найден.'
+            for id in id_set
+            if not model.objects.filter(id=id).exists()
+        ]
         duplicates = [
             id for id, count in Counter(id_set).items() if count > 1
         ]
         if duplicates:
-            errors.append(
-                f'Обнаружен дублированный {field_name} с ID: '
-                f'{duplicates}.'
+            errors.extend(
+                [
+                    f'Обнаружен дублированный {field_name} с ID: {id}.'
+                    for id in duplicates
+                ]
             )
         if errors:
             raise serializers.ValidationError(errors)
@@ -202,7 +203,10 @@ class SubscriptionSerializer(CurentUserSerializer):
         )
 
     def get_recipes(self, user):
-        return RecipeMiniSerializer(user.recipes.all(), many=True).data
+        recipes_limit = self.context.get('recipes_limit', 10**10)
+        return RecipeMiniSerializer(
+            user.recipes.all()[:recipes_limit], many=True
+        ).data
 
     def get_recipes_count(self, user):
         return user.recipes.count()

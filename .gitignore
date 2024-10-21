@@ -141,4 +141,9 @@ dmypy.json
 static/
 media/
 
+
 collected_static/
+create_users.py
+create_superuser.py
+first_time_setup.py
+media_data/

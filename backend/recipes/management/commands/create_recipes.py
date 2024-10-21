@@ -9,12 +9,12 @@ recipes_data = {
     "recipe_one": {
         "id": 1,
         "ingredients": [
-            {"id": 2180, "amount": 150},
+            {"id": 2180, "amount": 2},
             {"id": 591, "amount": 300},
             {"id": 1546, "amount": 15},
             {"id": 1419, "amount": 15},
-            {"id": 1684, "amount": 1.25},
-            {"id": 1669, "amount": 1.5},
+            {"id": 1684, "amount": 1},
+            {"id": 1669, "amount": 1},
             {"id": 1081, "amount": 220}
         ],
         "tags": [2],
@@ -246,12 +246,12 @@ recipes_data = {
             {"id": 1162, "amount": 15},
             {"id": 1852, "amount": 125},
             {"id": 553, "amount": 10},
-            {"id": 1250, "amount": 2.5},
+            {"id": 1250, "amount": 3},
             {"id": 43, "amount": 250},
             {"id": 1100, "amount": 50},
-            {"id": 30, "amount": 1.3},
+            {"id": 30, "amount": 1},
             {"id": 1546, "amount": 10},
-            {"id": 680, "amount": 2.5},
+            {"id": 680, "amount": 3},
             {"id": 1684, "amount": 1},
             {"id": 1235, "amount": 1}
         ],

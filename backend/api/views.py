@@ -165,7 +165,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         serializer.save(author=self.request.user)
 
     @staticmethod
-    def manage_recipe_in_cart(request, pk, model):
+    def manage_user_recipe_relation(request, pk, model):
         user = request.user
         recipe = get_object_or_404(Recipe, pk=pk)
         if request.method == 'DELETE':
@@ -188,7 +188,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=(IsAuthenticated,)
     )
     def shopping_cart(self, request, pk=None):
-        return self.manage_recipe_in_cart(request, pk, ShoppingCart)
+        return self.manage_user_recipe_relation(request, pk, ShoppingCart)
 
     @action(
         detail=True,
@@ -198,7 +198,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     )
     def favorite(self, request, pk=None):
-        return self.manage_recipe_in_cart(request, pk, Favorite)
+        return self.manage_user_recipe_relation(request, pk, Favorite)
 
     @action(
         detail=True,

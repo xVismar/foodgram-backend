@@ -11,6 +11,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'default_key')
 
 DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
 
+
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost').split(', ')
 
 AUTH_USER_MODEL = 'recipes.User'

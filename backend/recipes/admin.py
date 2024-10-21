@@ -16,33 +16,35 @@ class CookingTimeFilter(admin.SimpleListFilter):
     parameter_name = 'cooking_time'
 
     THRESHOLDS = {
-        'Быстро': (0, (COOK_TIME_QUICK - 1)),
-        'Средне': (COOK_TIME_QUICK, (COOK_TIME_LONG - 1)),
-        'Долго': (COOK_TIME_LONG, COOK_TIME_LONG**5),
+        'Быстро': (0, COOK_TIME_QUICK - 1),
+        'Средне': (COOK_TIME_QUICK, COOK_TIME_LONG - 1),
+        'Долго': (COOK_TIME_LONG, 10**10),
     }
 
     def lookups(self, request, model):
-        cooking_time_counts = {}
-        for name, (min_time, max_time) in self.THRESHOLDS.items():
-            count = Recipe.objects.filter(
-                cooking_time__range=[min_time, max_time]
-            ).count()
-            cooking_time_counts[name] = count
+
+        recipes = [
+            {
+                'name': name,
+                'count': Recipe.objects.filter(
+                    cooking_time__range=[min_time, max_time]
+                ).count()
+            }
+            for name, (min_time, max_time) in self.THRESHOLDS.items()
+        ]
         return [
             (
-                f'{name.capitalize()} ({count})',
-                f'{min_time} - {max_time} минут'
-            ) for name, (min_time, max_time), count in zip(
-                self.THRESHOLDS.keys(),
-                self.THRESHOLDS.values(),
-                cooking_time_counts.values()
+                f'{recipe["name"]}',
+                (f'{recipe["name"]} ({recipe["count"]})')
             )
+            for recipe in recipes
         ]
 
     def queryset(self, request, queryset):
         if self.value():
-            min_time, max_time = map(int, self.value().split('-'))
-            return queryset.filter(cooking_time__range=(min_time, max_time))
+            min_time, max_time = self.THRESHOLDS.get(self.value())
+            return queryset.filter(cooking_time__range=[min_time, max_time])
+        return queryset
 
 
 class RecipeIngredientInline(admin.TabularInline):
@@ -77,23 +79,23 @@ class RecipeAdmin(admin.ModelAdmin):
         'get_tags',
         'get_ingredients',
         'image',
-        'cooking_time'
+        'cooking_time',
     )
     search_fields = [
         'author__username',
         'name',
-        'tags'
+        'tags',
     ]
     autocomplete_fields = ['author']
     list_filter = [
         'tags',
         'author',
-        CookingTimeFilter,
+        CookingTimeFilter
     ]
-    inlines = [RecipeIngredientInline, RecipeTagInline, FavoriteInline, ]
+    inlines = [RecipeIngredientInline, RecipeTagInline, FavoriteInline]
     fieldsets = (
-        (None, {'fields': ('name', 'author', )}),
-        ('Описание', {'fields': ('text', 'cooking_time', 'image')}),
+        (None, {'fields': ('name', 'author',)}),
+        ('Описание', {'fields': ('text', 'cooking_time', 'image',)}),
     )
     add_fieldsets = (
         (
@@ -116,16 +118,22 @@ class RecipeAdmin(admin.ModelAdmin):
         models.ManyToManyField: {'widget': CheckboxSelectMultiple},
     }
 
-    @admin.display(description='Продукты с Е.И. и мерой')
+    @admin.display(description='Продукты')
     @mark_safe
     def get_ingredients(self, recipe):
-        ingredients = recipe.recipeingredients.all()
-        ingredients_info = [
-            f'{ingredient.ingredient.name} '
-            f'({ingredient.ingredient.measurement_unit}) - {ingredient.amount}'
-            for ingredient in ingredients
-        ]
-        return '<br>'.join(ingredients_info)
+        ingredients = recipe.recipeingredients.all().values(
+            'ingredient__name',
+            'ingredient__measurement_unit',
+            'amount'
+        )
+        return '<br>'.join(
+            [
+                f'{ingredient["ingredient__name"]} '
+                f'({ingredient["ingredient__measurement_unit"]}) - '
+                f'{ingredient["amount"]}'
+                for ingredient in ingredients
+            ]
+        )
 
     @admin.display(description='В избранном')
     def favorite_count(self, recipe):

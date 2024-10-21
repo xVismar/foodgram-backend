@@ -8,8 +8,4 @@ class Command(BaseCommand):
     help = 'Импортирует ингредиенты из файла ingredients.json'
 
     def handle(self, *args, **kwargs):
-        success, message = import_from_json(Ingredient, 'ingredients.json')
-        if success:
-            self.stdout.write(self.style.SUCCESS(message))
-        else:
-            self.stdout.write(self.style.ERROR(message))
+        return import_from_json(self, Ingredient, 'ingredients.json')

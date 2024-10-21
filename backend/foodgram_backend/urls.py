@@ -4,8 +4,6 @@ from django.shortcuts import redirect
 from django.urls import include, path, reverse
 from django.views.generic import RedirectView
 
-from api.views import RecipeViewSet
-
 
 def redirect_short_link(request, short_id):
     return redirect(reverse('recipe-detail', args=[short_id]))
@@ -14,7 +12,6 @@ def redirect_short_link(request, short_id):
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('api.urls', namespace='api')),
-    path('s/<int:short_id>/', redirect_short_link, name='short-link-redirect'),
     path(
         'about/',
         RedirectView.as_view(url='/static/pages/about/index.html'),
@@ -25,9 +22,5 @@ urlpatterns = [
         RedirectView.as_view(url='/static/pages/technologies/index.html'),
         name='Технологии'
     ),
-    path(
-        'recipes/<int:pk>/',
-        RecipeViewSet.as_view({'get': 'retrieve'}),
-        name='recipe-detail'
-    )
+    path('', include('recipes.urls', namespace='recipes')),
 ]
