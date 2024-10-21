@@ -135,7 +135,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
     search_fields = ('tags__slug',)
-    permission_classes = (AllowAny,)
     permission_classes = {
         'create': [IsAuthenticated, IsAuthorOrReadOnly],
         'update': [IsAuthenticated, IsAuthorOrReadOnly],
