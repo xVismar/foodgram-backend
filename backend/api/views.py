@@ -7,7 +7,7 @@ from djoser.views import UserViewSet
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, SAFE_METHODS
 from rest_framework.response import Response
 
 from api.filters import RecipeFilter
@@ -135,13 +135,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
     search_fields = ('tags__slug',)
-    permission_classes = {
-        'create': [IsAuthenticated, IsAuthorOrReadOnly],
-        'update': [IsAuthenticated, IsAuthorOrReadOnly],
-        'partial_update': [IsAuthenticated, IsAuthorOrReadOnly],
-        'destroy': [IsAuthenticated, IsAuthorOrReadOnly],
-        'default': [AllowAny],
-    }
+    permission_classes = (IsAuthenticated, IsAuthorOrReadOnly,)
+
+    def get_permissions(self):
+        return (
+
+            (AllowAny(),) if self.request.method in SAFE_METHODS
+            else super().get_permissions()
+        )
 
     def get_queryset(self):
         queryset = super().get_queryset()
