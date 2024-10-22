@@ -90,36 +90,40 @@ class RecipeSerializer(serializers.ModelSerializer):
             'cooking_time',
         )
 
-    def validate_fields(self, field_data, field_name, model):
+    def validate_fields(
+        self, model, field_name, field_data, validation_message
+    ):
         if not field_data:
-            raise serializers.ValidationError(
-                f'Нельзя создать рецепт без {field_name}.'
-            )
-        field_ids = {
-            field['id'] if isinstance(field, dict) else field.id
-            for field in field_data
-        }
-        if len(field_ids) != len(field_data):
-            raise serializers.ValidationError(
-                f'{field_name} не могут повторяться.'
-            )
-        non_existent_ids = (
-            field_ids - {obj.id for obj in model.objects.filter(
-                id__in=field_ids
-            )}
-        )
-        if non_existent_ids:
-            raise serializers.ValidationError(
-                f'Таких {field_name} не существует: '
-                f'{", ".join(map(str, non_existent_ids))}.'
-            )
+            raise serializers.ValidationError(validation_message)
+        items = set()
+        for item in field_data:
+            item_id = item[f'{item}']['id']
+            if item_id in items:
+                raise serializers.ValidationError(
+                    f'{field_name}s не могут повторяться.'
+                )
+            items.add(item_id)
+            if not model.objects.filter(id=item_id).exists():
+                raise serializers.ValidationError(
+                    f'{field_name} с ID: {item_id} не существует.'
+                )
         return field_data
 
-    def validate_ingredients(self, field_data):
-        return self.validate_fields(field_data, 'ингредиентов', Ingredient)
+    def validate_ingredients(self, value):
+        return self.validate_fields(
+            Ingredient,
+            'Ingredient',
+            value,
+            'Нельзя создать рецепт без ингредиентов.'
+        )
 
-    def validate_tags(self, field_data):
-        return self.validate_fields(field_data, 'тегов', Tag)
+    def validate_tags(self, value):
+        return self.validate_fields(
+            Tag,
+            'Tag',
+            value,
+            'Нельзя создать рецепт без тэгов.'
+        )
 
     def recipe_ingredients_create(self, recipe, ingredients_data):
         RecipeIngredient.objects.bulk_create(

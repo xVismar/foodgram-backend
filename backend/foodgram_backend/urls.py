@@ -1,12 +1,6 @@
-
 from django.contrib import admin
-from django.shortcuts import redirect
-from django.urls import include, path, reverse
+from django.urls import include, path
 from django.views.generic import RedirectView
-
-
-def redirect_short_link(request, short_id):
-    return redirect(reverse('recipe-detail', args=[short_id]))
 
 
 urlpatterns = [
