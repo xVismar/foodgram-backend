@@ -86,9 +86,10 @@ class RecipeSerializer(serializers.ModelSerializer):
             'cooking_time',
         )
 
-    def related_field_validate(self, field_name, model, validation_message):
-        self.is_valid()
-        related_data = self.validated_data.get(field_name)
+    def related_field_validate(
+        self, model_data, field_name, model, validation_message
+    ):
+        related_data = model_data(field_name)
         if not related_data:
             raise serializers.ValidationError(validation_message)
         id_set = set(item['id'] for item in related_data)
@@ -109,12 +110,18 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     def validate_ingredients(self, ingredients_data):
         return self.related_field_validate(
-            'ingredients', Ingredient, 'Нельзя создать рецепт без продуктов.'
+            ingredients_data,
+            'ingredients',
+            Ingredient,
+            'Нельзя создать рецепт без продуктов.'
         )
 
     def validate_tags(self, tags_data):
         return self.related_field_validate(
-            'tags', Tag, 'Нельзя создать рецепт без хотя бы одного тэга.'
+            tags_data,
+            'tags',
+            Tag,
+            'Нельзя создать рецепт без хотя бы одного тэга.'
         )
 
     def recipe_ingredients_create(self, recipe, ingredients_data):
