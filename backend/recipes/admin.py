@@ -7,8 +7,10 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
 from recipes.constants import COOK_TIME_LONG, COOK_TIME_QUICK
-from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
-                            ShoppingCart, Subscription, Tag, User)
+from recipes.models import (
+    Favorite, Ingredient, Recipe, RecipeIngredient, ShoppingCart,
+    Subscription, Tag, User
+)
 
 
 class CookingTimeFilter(admin.SimpleListFilter):
@@ -22,28 +24,21 @@ class CookingTimeFilter(admin.SimpleListFilter):
     }
 
     def lookups(self, request, model):
-
-        recipes = [
-            {
-                'name': name,
-                'count': Recipe.objects.filter(
-                    cooking_time__range=[min_time, max_time]
-                ).count()
-            }
-            for name, (min_time, max_time) in self.THRESHOLDS.items()
-        ]
         return [
-            (
-                f'{recipe["name"]}',
-                (f'{recipe["name"]} ({recipe["count"]})')
+            ((min_time, max_time), (f'{name} ({count})'))
+            for name, (min_time, max_time) in self.THRESHOLDS.items()
+            for count in (Recipe.objects.filter(
+                cooking_time__range=[min_time, max_time]
+            ).count(),
             )
-            for recipe in recipes
         ]
 
     def queryset(self, request, queryset):
         if self.value():
-            min_time, max_time = self.THRESHOLDS.get(self.value())
-            return queryset.filter(cooking_time__range=[min_time, max_time])
+            min_time, max_time = eval(self.value())
+            return queryset.filter(
+                cooking_time__range=[min_time, max_time]
+            )
         return queryset
 
 
@@ -57,7 +52,7 @@ class RecipeIngredientInline(admin.TabularInline):
             f'{ingredient.name} ({ingredient.measurement_unit}) - '
             f'{recipeingredient.amount}'
         )
-    readonly_fields = ["ingredient_info"]
+    readonly_fields = ('ingredient_info',)
 
 
 class RecipeTagInline(admin.TabularInline):
@@ -79,23 +74,23 @@ class RecipeAdmin(admin.ModelAdmin):
         'get_tags',
         'get_ingredients',
         'image',
-        'cooking_time',
+        'cooking_time'
     )
-    search_fields = [
+    search_fields = (
         'author__username',
         'name',
-        'tags',
-    ]
-    autocomplete_fields = ['author']
-    list_filter = [
+        'tags'
+    )
+    autocomplete_fields = ('author',)
+    list_filter = (
         'tags',
         'author',
         CookingTimeFilter
-    ]
-    inlines = [RecipeIngredientInline, RecipeTagInline, FavoriteInline]
+    )
+    inlines = (RecipeIngredientInline, RecipeTagInline, FavoriteInline)
     fieldsets = (
         (None, {'fields': ('name', 'author',)}),
-        ('Описание', {'fields': ('text', 'cooking_time', 'image',)}),
+        ('Описание', {'fields': ('text', 'cooking_time', 'image',)})
     )
     add_fieldsets = (
         (
@@ -109,7 +104,7 @@ class RecipeAdmin(admin.ModelAdmin):
                     'text',
                     'cooking_time',
                     'ingredients',
-                    'image',
+                    'image'
                 ),
             },
         ),
@@ -121,18 +116,10 @@ class RecipeAdmin(admin.ModelAdmin):
     @admin.display(description='Продукты')
     @mark_safe
     def get_ingredients(self, recipe):
-        ingredients = recipe.recipeingredients.all().values(
-            'ingredient__name',
-            'ingredient__measurement_unit',
-            'amount'
-        )
-        return '<br>'.join(
-            [
-                f'{ingredient["ingredient__name"]} '
-                f'({ingredient["ingredient__measurement_unit"]}) - '
-                f'{ingredient["amount"]}'
-                for ingredient in ingredients
-            ]
+        return '<br>'.join((
+            f'{recipe.ingredient.name} ( '
+            f'{recipe.ingredient.measurement_unit}) {recipe.amount} '
+            for recipe in recipe.recipeingredients.all())
         )
 
     @admin.display(description='В избранном')
@@ -147,24 +134,15 @@ class RecipeAdmin(admin.ModelAdmin):
 
 @admin.register(Ingredient)
 class IngredientAdmin(admin.ModelAdmin):
-    list_display = (
-        'name',
-        'measurement_unit',
-    )
-    search_fields = [
-        'name',
-        'measurement_unit',
-    ]
-    list_filter = ['measurement_unit']
+    list_display = ('name', 'measurement_unit')
+    search_fields = ('name', 'measurement_unit')
+    list_filter = ('measurement_unit',)
 
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
     list_display = ('name', 'slug')
-    search_fields = [
-        'name',
-        'slug',
-    ]
+    search_fields = ('name', 'slug')
 
 
 @admin.register(Favorite)

@@ -99,20 +99,16 @@ class RecipeSerializer(serializers.ModelSerializer):
         if not related_data:
             raise serializers.ValidationError(validation_message)
         id_set = set(item['id'] for item in related_data)
-        errors = [
-            f'{field_name} с ID [{id}] не найден.'
-            for id in id_set
-            if not model.objects.filter(id=id).exists()
+        not_found = [
+            id for id in id_set if not model.objects.filter(id=id).exists()
         ]
-        duplicates = [
-            id for id, count in Counter(id_set).items() if count > 1
-        ]
+        duplicates = [id for id, count in Counter(id_set).items() if count > 1]
+        errors = []
+        if not_found:
+            errors.append(f'{field_name}s с ID {not_found} не найдены.')
         if duplicates:
-            errors.extend(
-                [
-                    f'Обнаружен дублированный {field_name} с ID: {id}.'
-                    for id in duplicates
-                ]
+            errors.append(
+                f'Обнаружены дублированные {field_name}s с ID: {duplicates}.'
             )
         if errors:
             raise serializers.ValidationError(errors)
@@ -203,9 +199,11 @@ class SubscriptionSerializer(CurentUserSerializer):
         )
 
     def get_recipes(self, user):
-        recipes_limit = self.context.get('recipes_limit', 10**10)
         return RecipeMiniSerializer(
-            user.recipes.all()[:recipes_limit], many=True
+            user.recipes.all()[
+                :self.context.get('recipes_limit', 10**10)
+            ],
+            many=True
         ).data
 
     def get_recipes_count(self, user):
