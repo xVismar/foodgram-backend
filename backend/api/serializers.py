@@ -54,6 +54,12 @@ class CurentUserSerializer(UserSerializer):
             ).exists()
         )
 
+    def update(self, instance, validated_data):
+        avatar = validated_data.pop('avatar', None)
+        if avatar:
+            instance.avatar.save(avatar.name, avatar, save=False)
+        return super().update(instance, validated_data)
+
 
 class RecipeSerializer(serializers.ModelSerializer):
     tags = serializers.PrimaryKeyRelatedField(
@@ -89,10 +95,9 @@ class RecipeSerializer(serializers.ModelSerializer):
     def related_field_validate(
         self, model_data, field_name, model, validation_message
     ):
-        related_data = model_data(field_name)
-        if not related_data:
+        if not model_data:
             raise serializers.ValidationError(validation_message)
-        id_set = set(item['id'] for item in related_data)
+        id_set = set(item['id'] for item in model_data)
         not_found = [
             id for id in id_set if not model.objects.filter(id=id).exists()
         ]
@@ -106,7 +111,7 @@ class RecipeSerializer(serializers.ModelSerializer):
             )
         if errors:
             raise serializers.ValidationError(errors)
-        return related_data
+        return model_data
 
     def validate_ingredients(self, ingredients_data):
         return self.related_field_validate(
