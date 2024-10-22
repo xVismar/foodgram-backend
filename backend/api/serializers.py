@@ -24,7 +24,7 @@ class IngredientsSerializer(serializers.ModelSerializer):
 
 
 class RecipeIngredientSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField(source='ingredient.id')
+    id = serializers.ReadOnlyField(source='ingredient.id')
     name = serializers.ReadOnlyField(source='ingredient.name')
     measurement_unit = serializers.ReadOnlyField(
         source='ingredient.measurement_unit'
@@ -95,10 +95,10 @@ class RecipeSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 f'Нельзя создать рецепт без {field_name}.'
             )
-        field_ids = (
-            {field['id'] if isinstance(field, dict)
-             else field.id for field in field_data}
-        )
+        field_ids = {
+            field['id'] if isinstance(field, dict) else field.id
+            for field in field_data
+        }
         if len(field_ids) != len(field_data):
             raise serializers.ValidationError(
                 f'{field_name} не могут повторяться.'
