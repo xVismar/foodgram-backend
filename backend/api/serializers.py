@@ -54,14 +54,6 @@ class CurentUserSerializer(UserSerializer):
             ).exists()
         )
 
-    def update(self, instance, validated_data):
-        avatar = validated_data.get('avatar', None)
-        if avatar:
-            if instance.avatar:
-                instance.avatar.delete()
-            instance.avatar = avatar
-        return super().update(instance, validated_data)
-
 
 class RecipeSerializer(serializers.ModelSerializer):
     tags = serializers.PrimaryKeyRelatedField(
@@ -95,6 +87,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         )
 
     def related_field_validate(self, field_name, model, validation_message):
+        self.is_valid()
         related_data = self.validated_data.get(field_name)
         if not related_data:
             raise serializers.ValidationError(validation_message)
