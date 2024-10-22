@@ -1,5 +1,3 @@
-from collections import Counter
-
 from django.db import transaction
 from djoser.serializers import UserSerializer
 from drf_extra_fields.fields import Base64ImageField
@@ -60,6 +58,15 @@ class CurentUserSerializer(UserSerializer):
             instance.avatar.save(avatar.name, avatar, save=False)
         return super().update(instance, validated_data)
 
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            representation['avatar'] = request.build_absolute_uri(
+                instance.avatar.url
+            )
+        return representation
+
 
 class RecipeSerializer(serializers.ModelSerializer):
     tags = serializers.PrimaryKeyRelatedField(
@@ -92,42 +99,36 @@ class RecipeSerializer(serializers.ModelSerializer):
             'cooking_time',
         )
 
-    def related_field_validate(
-        self, model_data, field_name, model, validation_message
-    ):
-        if not model_data:
-            raise serializers.ValidationError(validation_message)
-        id_set = set(item.id for item in model_data)
-        not_found = [
-            id for id in id_set if not model.objects.filter(id=id).exists()
-        ]
-        duplicates = [id for id, count in Counter(id_set).items() if count > 1]
-        errors = []
-        if not_found:
-            errors.append(f'{field_name}s с ID {not_found} не найдены.')
-        if duplicates:
-            errors.append(
-                f'Обнаружены дублированные {field_name}s с ID: {duplicates}.'
+    def validate_ingredients(self, value):
+        if not value:
+            raise serializers.ValidationError(
+                'Нельзя создать рецепт без ингредиентов.'
             )
-        if errors:
-            raise serializers.ValidationError(errors)
-        return model_data
+        ingredients = set()
+        for ingredient in value:
+            ingredient_id = ingredient['ingredient']['id']
+            if ingredient_id in ingredients:
+                raise serializers.ValidationError(
+                    'Ингредиенты не могут повторяться.')
+            ingredients.add(ingredient_id)
+            if not Ingredient.objects.filter(id=ingredient_id).exists():
+                raise serializers.ValidationError(
+                    'Такого ингредиента не существует.'
+                )
+        return value
 
-    def validate_ingredients(self, ingredients_data):
-        return self.related_field_validate(
-            ingredients_data,
-            'ingredients',
-            Ingredient,
-            'Нельзя создать рецепт без продуктов.'
-        )
-
-    def validate_tags(self, tags_data):
-        return self.related_field_validate(
-            tags_data,
-            'tags',
-            Tag,
-            'Нельзя создать рецепт без хотя бы одного тэга.'
-        )
+    def validate_tags(self, value):
+        if not value:
+            raise serializers.ValidationError(
+                'Нелья создать рецепт без добавления хотя бы однго тега.'
+            )
+        tags = set()
+        for tag in value:
+            if tag in tags:
+                raise serializers.ValidationError(
+                    'Теги не могут повторяться.')
+            tags.add(tag)
+        return value
 
     def recipe_ingredients_create(self, recipe, ingredients_data):
         RecipeIngredient.objects.bulk_create(
