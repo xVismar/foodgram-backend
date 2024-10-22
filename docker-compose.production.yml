@@ -31,7 +31,7 @@ services:
   gateway:
     image: vismar/foodgram_gateway
     volumes:
-      - static:/static
+      - static:/staticfiles
       - media:/media
       - ./docs/:/usr/share/nginx/html/api/docs/
     ports:

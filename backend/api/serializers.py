@@ -97,7 +97,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     ):
         if not model_data:
             raise serializers.ValidationError(validation_message)
-        id_set = set(item['id'] for item in model_data)
+        id_set = set(item.id for item in model_data)
         not_found = [
             id for id in id_set if not model.objects.filter(id=id).exists()
         ]
