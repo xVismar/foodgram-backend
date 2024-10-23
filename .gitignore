@@ -143,8 +143,8 @@ media/
 
 
 collected_static/
-# create_recipes.py
-# create_users.py
-# first_time_setup.py
-# create_superuser.py
-# backend/data/media_data/
+create_recipes.py
+create_users.py
+first_time_setup.py
+create_superuser.py
+backend/data/media_data/
