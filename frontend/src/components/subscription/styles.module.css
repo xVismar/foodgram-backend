@@ -46,7 +46,7 @@
   min-width: 36px;
   height: 36px;
   border-radius: 36px;
-  background-image: url("../../images/userpic-icon.jpg");
+  background-image: url("../../images/userpic-icon.jpg?timestamp=<%= Date.now() %>");
   background-size: cover;
   background-repeat: no-repeat;
   margin-right: 12px;
