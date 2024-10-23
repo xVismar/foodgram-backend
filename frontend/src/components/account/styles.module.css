@@ -17,7 +17,7 @@
   border-radius: 100%;
   overflow: hidden;
   margin-right: 14px;
-  /* background-image: url("../../images/userpic-icon.jpg"); */
+  background-image: url("../../images/userpic-icon.jpg");
   background-size: cover;
   background-repeat: no-repeat;
   cursor: pointer;

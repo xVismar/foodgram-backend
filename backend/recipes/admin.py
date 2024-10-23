@@ -3,14 +3,40 @@ from django.contrib.auth.admin import UserAdmin
 from django.db import models
 from django.forms import CheckboxSelectMultiple
 from django.urls import reverse
-from django.utils.html import format_html
+from ast import literal_eval
 from django.utils.safestring import mark_safe
+from django.db.models import CharField, Case, When, Value
+from rest_framework.authtoken.models import TokenProxy
+from django.contrib.auth.models import Group
 
 from recipes.constants import COOK_TIME_LONG, COOK_TIME_QUICK
 from recipes.models import (
     Favorite, Ingredient, Recipe, RecipeIngredient, ShoppingCart,
     Subscription, Tag, User
 )
+
+admin.site.unregister(TokenProxy)
+admin.site.unregister(Group)
+
+
+link_data = {
+    'Подписки': ('recipes_subscription_changelist', 'authors'),
+    'Рецепты': ('recipes_recipe_changelist', 'recipes'),
+    'Избранные рецепты': ('recipes_favorite_changelist', 'favorites'),
+    'Подписан': ('recipes_subscription_changelist', 'subscribers'),
+    'Продукты': ('ingredient_recipes_changelist', 'recipeingredients')
+}
+
+
+def generate_link(model, description, filter, url_name, field_name):
+    count = getattr(model, field_name).count()
+    if count > 0:
+        return (
+            f'<a href="{reverse("admin:" + url_name)}'
+            f'?{filter}__id__exact={model.id}">'
+            f'{count} {description}</a>'
+        )
+    return 0
 
 
 class CookingTimeFilter(admin.SimpleListFilter):
@@ -20,24 +46,31 @@ class CookingTimeFilter(admin.SimpleListFilter):
     THRESHOLDS = {
         'Быстро': (0, COOK_TIME_QUICK - 1),
         'Средне': (COOK_TIME_QUICK, COOK_TIME_LONG - 1),
-        'Долго': (COOK_TIME_LONG, 10**10),
+        'Долго': (COOK_TIME_LONG, 100 * 100),
     }
+
+    @staticmethod
+    def cooking_time_range_filter(time_range, object_to_sort):
+        min_time, max_time = time_range
+        return object_to_sort.filter(cooking_time__range=[min_time, max_time])
 
     def lookups(self, request, model):
         return [
-            ((min_time, max_time), (f'{name} ({count})'))
+            ((
+                min_time, max_time), (
+                f'{name} ({count}) {min_time} - {max_time}'
+            ))
             for name, (min_time, max_time) in self.THRESHOLDS.items()
-            for count in (Recipe.objects.filter(
-                cooking_time__range=[min_time, max_time]
-            ).count(),
-            )
+            for count in [self.cooking_time_range_filter(
+                (min_time, max_time), Recipe.objects
+            ).count()]
         ]
 
     def queryset(self, request, queryset):
         if self.value():
-            min_time, max_time = eval(self.value())
-            return queryset.filter(
-                cooking_time__range=[min_time, max_time]
+            min_time, max_time = literal_eval(self.value())
+            return (
+                self.cooking_time_range_filter((min_time, max_time), queryset)
             )
         return queryset
 
@@ -73,7 +106,7 @@ class RecipeAdmin(admin.ModelAdmin):
         'favorite_count',
         'get_tags',
         'get_ingredients',
-        'image',
+        'thumbnail',
         'cooking_time'
     )
     search_fields = (
@@ -104,7 +137,7 @@ class RecipeAdmin(admin.ModelAdmin):
                     'text',
                     'cooking_time',
                     'ingredients',
-                    'image'
+                    'thumbnail',
                 ),
             },
         ),
@@ -131,12 +164,37 @@ class RecipeAdmin(admin.ModelAdmin):
     def get_tags(self, recipe):
         return '<br>'.join(tag.name for tag in recipe.tags.all())
 
+    @admin.display(description='Картинка')
+    @mark_safe
+    def thumbnail(self, recipe):
+        return (
+            '<img src="{0}" width="100px" height="100px" />'.format(
+                recipe.image.url
+            )
+        )
+
 
 @admin.register(Ingredient)
 class IngredientAdmin(admin.ModelAdmin):
-    list_display = ('name', 'measurement_unit')
-    search_fields = ('name', 'measurement_unit')
-    list_filter = ('measurement_unit',)
+    list_display = (
+        'name', 'measurement_unit', 'number_of_recipes'
+    )
+    search_fields = ('name', 'measurement_unit', 'recipes')
+    list_filter = ('recipes',)
+
+    def generate_ingredient_link(self, ingredient):
+        count = ingredient.recipes.count()
+        if count > 0:
+            return (
+                f'<a href="/admin/recipes/recipe/'
+                f'?ingredients={ingredient.id}">{count}</a>'
+            )
+        return 0
+
+    @mark_safe
+    @admin.display(description='Рецепты')
+    def number_of_recipes(self, ingredient):
+        return self.generate_ingredient_link(ingredient)
 
 
 @admin.register(Tag)
@@ -161,12 +219,13 @@ class UserAdmin(UserAdmin):
         'email',
         'username',
         'is_active',
-        'is_staff',
-        'is_superuser',
+        'is_staff_display',
+        'is_superuser_display',
         'number_of_recipes',
         'number_of_subscriptions',
         'number_of_subscribers',
-        'avatar'
+        'number_of_favorites',
+        'avatar_image'
     )
     search_fields = ('email', 'username')
     fieldsets = (
@@ -198,54 +257,68 @@ class UserAdmin(UserAdmin):
         ),
     )
     ordering = ('username',)
-    readonly_fields = (
-        'get_subscriptions', 'get_recipes', 'get_favorited_recipes'
-    )
 
     def get_queryset(self, request):
         return (
             super().get_queryset(request).filter(
-                recipes__isnull=False).distinct()
-        )
-
-    @staticmethod
-    def generate_link(user, description, url_name, field_name):
-        count = getattr(user, field_name).count()
-        if count > 0:
-            return format_html(
-                '<a href="{}?{}__id__exact={}">{count} {description}</a>',
-                reverse('admin:' + url_name),
-                'author',
-                user.id,
-                count=count,
-                description=description
+                recipes__isnull=False).distinct().annotate(
+                    is_staff_display=Case(
+                        When(is_staff=True, then=Value('Админ')),
+                        default=Value('Юзер'),
+                        output_field=CharField()
+                    )
             )
-        return 0
-
-    link_data = {
-        'Подписки': ('recipes_subscription_changelist', 'authors'),
-        'Рецепты': ('recipes_recipe_changelist', 'recipes'),
-        'Избранные рецепты': ('recipes_favorite_changelist', 'favorites')
-    }
+        )
 
     @mark_safe
     @admin.display(description='Подписки')
-    def get_subscriptions(self, user):
-        return self.generate_link(
-            user, 'подписок', *self.link_data['Подписки']
+    def number_of_subscribers(self, user):
+        return generate_link(
+            user, 'подписок', 'author', *link_data['Подписки']
         )
 
     @mark_safe
-    @admin.display(description='Рецепты')
-    def get_recipes(self, user):
-        return self.generate_link(user, 'рецепт', *self.link_data['Рецепты'])
+    @admin.display(description='Подписан')
+    def number_of_subscriptions(self, user):
+        return generate_link(
+            user, 'подписан', 'author', *link_data['Подписан']
+        )
 
     @mark_safe
-    @admin.display(description='Избранные рецепты')
-    def get_favorited_recipes(self, user):
-        return self.generate_link(
-            user, 'избранных рецептов', *self.link_data['Избранные рецепты']
+    @admin.display(description='Рецептов')
+    def number_of_recipes(self, user):
+        return generate_link(user, '', 'author', *link_data['Рецепты'])
+
+    @mark_safe
+    @admin.display(description='Избранных')
+    def number_of_favorites(self, user):
+        return generate_link(
+            user, 'избранных', 'author', *link_data['Избранные рецепты']
         )
+
+    @admin.display(description='Штат')
+    def is_staff_display(self, user):
+        return user.is_staff_display
+
+    @mark_safe
+    @admin.display(description='Супер')
+    def is_superuser_display(self, user):
+        return (
+            '<img src="/static/admin/img/icon-yes.svg" alt="True">'
+            if user.is_superuser else
+            '<img src="/static/admin/img/icon-no.svg" alt="False">'
+        )
+
+    @admin.display(description='Аватар')
+    @mark_safe
+    def avatar_image(self, user):
+        if user.avatar:
+            return (
+                '<img src="{0}" width="100px" height="100px" />'.format(
+                    user.avatar.url
+                )
+            )
+        return ' '
 
 
 @admin.register(Subscription)

@@ -19,7 +19,7 @@ from api.serializers import (
 )
 from api.services import shopping_cart_list
 from recipes.models import (
-    Favorite, Ingredient, Recipe, ShoppingCart, Subscription, Tag
+    Ingredient, Recipe, ShoppingCart, Subscription, Tag
 )
 
 
@@ -198,7 +198,16 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     )
     def favorite(self, request, pk=None):
-        return self.manage_user_recipe_relation(request, pk, Favorite)
+        page = self.paginate_queryset(request.user.favorites.all())
+        serializer = RecipeMiniSerializer(
+            page or request.user.favorites.all(),
+            many=True,
+            context={'request': request}
+        )
+        return (
+            self.get_paginated_response(serializer.data) if page is not None
+            else Response(serializer.data)
+        )
 
     @action(
         detail=True,

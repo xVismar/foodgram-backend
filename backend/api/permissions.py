@@ -5,6 +5,6 @@ class IsAuthorOrReadOnly(permissions.BasePermission):
 
     def has_object_permission(self, request, view, recipe):
         return (
-            True if request.method in permissions.SAFE_METHODS
-            else recipe.author == request.user
+            request.method in permissions.SAFE_METHODS
+            or recipe.author == request.user
         )
