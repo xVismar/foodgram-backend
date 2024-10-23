@@ -57,7 +57,8 @@ class CurentUserSerializer(UserSerializer):
     def update(self, instance, validated_data):
         avatar = validated_data.pop('avatar', None)
         if avatar:
-            instance.avatar.save(avatar.name, avatar, save=False)
+            instance.avatar = avatar
+            instance.save()
         return super().update(instance, validated_data)
 
 

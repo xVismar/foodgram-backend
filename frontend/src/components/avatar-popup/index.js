@@ -62,7 +62,7 @@ export const AvatarPopup = ({
         <div
           className={styles.image}
           style={{
-            backgroundImage: `url(${currentFile})`,
+            backgroundImage: `url(${currentFile || DefaultImage})`,
           }}
         >
           <div className={styles.imageOverlay}>

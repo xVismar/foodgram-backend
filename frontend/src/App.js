@@ -5,10 +5,9 @@ import React, { useState, useEffect } from "react";
 import { Header, Footer, ProtectedRoute } from "./components";
 import api from "./api";
 import styles from "./styles.module.css";
-import { Link } from 'react-router-dom'
 
 import {
-  About,
+  // About,
   Main,
   Cart,
   SignIn,
@@ -23,7 +22,7 @@ import {
   NotFound,
   UpdateAvatar,
   ResetPassword,
-  Technologies,
+  // Technologies,
 } from "./pages";
 
 import { AuthContext, UserContext } from "./contexts";
@@ -295,7 +294,8 @@ function App() {
             </Route>
 
             <Route exact path="/about">
-              {<About component={About} />}
+              <NotFound />
+              {/* <About component={About} /> */}
             </Route>
 
             <Route exact path="/reset-password">
@@ -303,7 +303,8 @@ function App() {
             </Route>
 
             <Route exact path="/technologies">
-              {<Technologies component={Technologies}/>}
+              <NotFound />
+              {/* <Technologies component={Technologies}/> */}
             </Route>
 
             <Route exact path="/recipes">

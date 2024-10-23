@@ -156,7 +156,7 @@ const SingleCard = ({ loadItem, updateOrders }) => {
                     className={styles["single-card__user-avatar"]}
                     style={{
                       "background-image": `url(${
-                        author.avatar
+                        author.avatar || DefaultImage
                       })`,
                     }}
                   />

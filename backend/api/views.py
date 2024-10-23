@@ -7,7 +7,7 @@ from djoser.views import UserViewSet
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import AllowAny, IsAuthenticated, SAFE_METHODS
+from rest_framework.permissions import SAFE_METHODS, AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from api.filters import IngredientFilter, RecipeFilter
@@ -18,10 +18,7 @@ from api.serializers import (
     RecipeSerializer, SubscriptionSerializer, TagSerializer
 )
 from api.services import shopping_cart_list
-from recipes.models import (
-    Ingredient, Recipe, ShoppingCart, Subscription, Tag
-)
-
+from recipes.models import Ingredient, Recipe, ShoppingCart, Subscription, Tag
 
 User = get_user_model()
 

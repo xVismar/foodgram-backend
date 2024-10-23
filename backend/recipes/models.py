@@ -2,7 +2,6 @@
 from django.core.validators import MinValueValidator
 from django.db import models
 
-
 import recipes.constants as const
 from recipes.validators import validate_username
 
@@ -33,7 +32,6 @@ class User(AbstractUser):
         upload_to='avatars/',
         null=True,
         blank=True,
-        default=None,
         verbose_name='Аватар'
     )
 

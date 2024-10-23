@@ -54,7 +54,7 @@ const Subscription = ({
           <div
             className={styles.subscriptionAvatar}
             style={{
-              "background-image": `url(${avatar})`,
+              "background-image": `url(${avatar || DefaultImage})`,
             }}
           />
           <LinkComponent

@@ -25,7 +25,7 @@
   height: 60px;
   border-radius: 60px;
   overflow: hidden;
-  background-image: url("../../images/userpic-icon.jpg?timestamp=<%= Date.now() %>");
+  background-image: url('../../images/userpic-icon.jpg');
   background-size: cover;
   background-repeat: no-repeat;
   display: flex;

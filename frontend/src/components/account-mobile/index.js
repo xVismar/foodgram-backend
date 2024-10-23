@@ -14,7 +14,7 @@ const AccountData = ({ userContext, setIsChangeAvatarOpen }) => {
       <div
         className={styles.accountAvatar}
         style={{
-          "background-image": `url(${userContext.avatar})`,
+          "background-image": `url(${userContext.avatar || DefaultImage})`,
         }}
         onClick={() => {
           setIsChangeAvatarOpen(true);

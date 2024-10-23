@@ -113,7 +113,8 @@ const UserPage = ({ updateOrders }) => {
                 className={styles.userAvatar}
                 style={{
                   "background-image": `url(${
-                    (user && user.avatar)})`,
+                    (user && user.avatar) || DefaultImage
+                  })`,
                 }}
               />
               <Title
