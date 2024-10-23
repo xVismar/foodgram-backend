@@ -1,3 +1,5 @@
+from collections import Counter
+
 from django.db import transaction
 from djoser.serializers import UserSerializer
 from drf_extra_fields.fields import Base64ImageField
@@ -24,7 +26,7 @@ class IngredientsSerializer(serializers.ModelSerializer):
 
 
 class RecipeIngredientSerializer(serializers.ModelSerializer):
-    id = serializers.ReadOnlyField(source='ingredient.id')
+    id = serializers.IntegerField(source='ingredient.id')
     name = serializers.ReadOnlyField(source='ingredient.name')
     measurement_unit = serializers.ReadOnlyField(
         source='ingredient.measurement_unit'
@@ -90,59 +92,66 @@ class RecipeSerializer(serializers.ModelSerializer):
             'cooking_time',
         )
 
-    def validate_fields(
-        self, model, field_name, field_data, validation_message
+    def related_field_validate(
+        self, model_data, field_name, model, validation_message
     ):
-        if not field_data:
+        if not model_data:
             raise serializers.ValidationError(validation_message)
-        items = set()
-        for item in field_data:
-            item_id = item[f'{item}']['id']
-            if item_id in items:
-                raise serializers.ValidationError(
-                    f'{field_name}s не могут повторяться.'
-                )
-            items.add(item_id)
-            if not model.objects.filter(id=item_id).exists():
-                raise serializers.ValidationError(
-                    f'{field_name} с ID: {item_id} не существует.'
-                )
-        return field_data
+        id_set = set(
+            item.id if isinstance(item, model) else item['ingredient']['id']
+            for item in model_data
+        )
+        not_found = [
+            id for id in id_set if not model.objects.filter(id=id).exists()
+        ]
+        duplicates = [id for id, count in Counter(id_set).items() if count > 1]
+        errors = []
+        if not_found:
+            errors.append(f'{field_name}s с ID {not_found} не найдены.')
+        if duplicates:
+            errors.append(
+                f'Обнаружены дублированные {field_name}s с ID: {duplicates}.'
+            )
+        if errors:
+            raise serializers.ValidationError(errors)
+        return model_data
 
-    def validate_ingredients(self, value):
-        return self.validate_fields(
+    def validate_ingredients(self, ingredients_data):
+        return self.related_field_validate(
+            ingredients_data,
+            'ingredients',
             Ingredient,
-            'Ingredient',
-            value,
-            'Нельзя создать рецепт без ингредиентов.'
+            'Нельзя создать рецепт без продуктов.'
         )
 
-    def validate_tags(self, value):
-        return self.validate_fields(
+    def validate_tags(self, tags_data):
+        return self.related_field_validate(
+            tags_data,
+            'tags',
             Tag,
-            'Tag',
-            value,
-            'Нельзя создать рецепт без тэгов.'
+            'Нельзя создать рецепт без хотя бы одного тэга.'
         )
 
     def recipe_ingredients_create(self, recipe, ingredients_data):
-        RecipeIngredient.objects.bulk_create(
+        recipe_ingredients_to_create = [
             RecipeIngredient(
                 recipe=recipe,
                 ingredient_id=ingredient_data['ingredient']['id'],
-                amount=ingredient_data['amount']
-            )
+                amount=ingredient_data['amount'])
             for ingredient_data in ingredients_data
-        )
+        ]
+        RecipeIngredient.objects.bulk_create(recipe_ingredients_to_create)
 
     @transaction.atomic
     def create(self, validated_data):
         ingredients_data = validated_data.pop('recipeingredients')
         tags_data = validated_data.pop('tags')
-        validated_data = super().create(validated_data)
-        self.recipe_ingredients_create(validated_data, ingredients_data)
-        validated_data.tags.set(tags_data)
-        return validated_data
+        image_data = validated_data.pop('image')
+        recipe = Recipe.objects.create(**validated_data)
+        recipe.image.save(image_data.name, image_data, save=True)
+        self.recipe_ingredients_create(recipe, ingredients_data)
+        recipe.tags.set(tags_data)
+        return recipe
 
     @transaction.atomic
     def update(self, instance, validated_data):
