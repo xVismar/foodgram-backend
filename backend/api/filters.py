@@ -1,7 +1,7 @@
 
-from django_filters.rest_framework import BooleanFilter, FilterSet
+from django_filters.rest_framework import BooleanFilter, FilterSet, CharFilter
 
-from recipes.models import Recipe
+from recipes.models import Recipe, Ingredient
 
 
 class RecipeFilter(FilterSet):
@@ -27,3 +27,11 @@ class RecipeFilter(FilterSet):
                 else None
             ).distinct()
         return recipes
+
+
+class IngredientFilter(FilterSet):
+    name = CharFilter(field='name', lookup_expr='icontains')
+
+    class Meta:
+        model = Ingredient
+        fields = ('name',)
