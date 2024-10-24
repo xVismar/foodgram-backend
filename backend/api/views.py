@@ -38,17 +38,7 @@ class CurentUserViewSet(UserViewSet):
 
     @action(
         detail=False,
-        methods=['GET'],
-        url_path='me',
-    )
-    def me(self, request):
-        user = request.user
-        serializer = CurentUserSerializer(user)
-        return Response(serializer.data)
-
-    @action(
-        detail=False,
-        methods=['PUT', 'PATCH', 'DELETE'],
+        methods=['PUT', 'DELETE'],
         permission_classes=(IsAuthenticated,),
         url_path='me/avatar',
     )
@@ -220,32 +210,32 @@ class RecipeViewSet(viewsets.ModelViewSet):
         user = request.user
         recipe = get_object_or_404(Recipe, id=pk)
         if request.method == 'POST':
-            if model.objects.filter(recipe=recipe, user=user).exists():
+            _, created = model.objects.get_or_create(user=user, recipe=recipe)
+            if not created:
                 raise ValueError(
-                    f'Рецепт "{recipe.name}" уже был добавлен'
+                    f'Ошибка при добавлении рецепта "{recipe.name}"'
                     f'в {model._meta.verbose_name_plural}.'
                 )
-            _, created = model.objects.get_or_create(user=user, recipe=recipe)
-            if created:
-                serializer = RecipeMiniSerializer(
-                    recipe, context={'request': request}
-                )
-                return Response(
-                    serializer.data, status=status.HTTP_201_CREATED
-                )
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+            serializer = RecipeMiniSerializer(
+                recipe, context={'request': request}
+            )
+            RecipeViewSet.update_shopping_cart_field(recipe, user)
+            return Response(
+                serializer.data, status=status.HTTP_201_CREATED
+            )
         elif request.method == 'DELETE':
             get_object_or_404(model, recipe=recipe, user=user).delete()
+            RecipeViewSet.update_shopping_cart_field(recipe, user)
             return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(
-        detail=True,
-        methods=['POST', 'DELETE'],
-        permission_classes=(IsAuthenticated,),
-        url_path='shopping_cart',
-    )
-    def shopping_cart(self, request, pk):
-        return self.manage_user_recipe_relation(request, pk, ShoppingCart)
+    @staticmethod
+    def update_shopping_cart_field(recipe, user):
+        ShoppingCart.objects.filter(user=user, recipe=recipe).update(
+            is_in_shopping_cart=True
+        )
+        ShoppingCart.objects.exclude(user=user, recipe=recipe).update(
+            is_in_shopping_cart=False
+        )
 
     @action(
         detail=True,

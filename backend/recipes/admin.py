@@ -3,17 +3,13 @@ from ast import literal_eval
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import Group
-from django.db.models import CharField, Case, ManyToManyField, When, Value
+from django.db.models import Avg, Case, CharField, ManyToManyField, Value, When
 from django.forms import CheckboxSelectMultiple
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
-from recipes.constants import COOK_TIME_LONG, COOK_TIME_QUICK
-from recipes.models import (
-    Favorite, Ingredient, Recipe, RecipeIngredient, ShoppingCart,
-    Subscription, Tag, User
-)
-
+from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
+                            ShoppingCart, Subscription, Tag, User)
 
 admin.site.unregister(Group)
 
@@ -31,50 +27,54 @@ def generate_link(model, description, filter, url_name, field_name):
     if count > 0:
         return (
             f'<a href="{reverse("admin:" + url_name)}'
-            f'?{filter}__id__exact={model.id}">'
+            f'?{filter}__id__exact={model.id}">',
             f'{count} {description}</a>'
         )
-    return 0
+    return (0, '')
 
 
 class CookingTimeFilter(admin.SimpleListFilter):
-    title = 'Время готовки'
-    parameter_name = 'cooking_time'
+    title = 'Cooking Time'
+    parameter_name = 'cooking_time__range'
 
-    THRESHOLDS = {
-        'Быстро': (1, COOK_TIME_QUICK - 1),
-        'Средне': (COOK_TIME_QUICK, COOK_TIME_LONG - 1),
-        'Долго': (COOK_TIME_LONG, 100 * 100),
-    }
-
-    @staticmethod
-    def cooking_time_range_filter(time_range, recipes_to_sort):
-        return recipes_to_sort.filter(cooking_time__range=[*time_range])
-
-    def lookups(self, request, model):
+    def lookups(self, request, model_admin):
+        thresholds = self.get_cooking_time_thresholds(Recipe)
         return [
             (
-                (min_time, max_time),
-                (
-                    f'{name} ({count}) {min_time} '
-                    f'{-max_time if max_time < 1000 else ""}'
-                )
-            )
-            for name, (min_time, max_time) in self.THRESHOLDS.items()
-            for count in [self.cooking_time_range_filter(
-                [min_time, max_time], Recipe.objects
-            ).count()]
+                f'{min_time,max_time}', f'{min_time} - {max_time} ('
+                f'{self.get_recipe_count(min_time, max_time)})')
+            for min_time, max_time in zip(thresholds[:-1], thresholds[1:])
         ]
 
     def queryset(self, request, queryset):
         if self.value():
-            return (
-                self.cooking_time_range_filter(
-                    literal_eval(self.value()),
-                    queryset
+            if isinstance(self.value(), list) and all(isinstance(
+                time_range, str) for time_range in self.value()
+            ):
+                min_time, max_time = literal_eval(self.value())
+                return queryset.filter(
+                    cooking_time__gte=min_time, cooking_time__lte=max_time
                 )
-            )
-        return queryset
+            return queryset
+
+    def get_cooking_time_thresholds(self, model):
+        cooking_times = model.objects.values_list('cooking_time', flat=True)
+        min_cooking_time = min(cooking_times)
+        max_cooking_time = max(cooking_times)
+        average_cooking_time = int(model.objects.all().aggregate(Avg(
+            'cooking_time'))['cooking_time__avg']
+        )
+        quick_threshold = average_cooking_time // 2
+        medium_threshold = (average_cooking_time + max_cooking_time) // 2
+        return [
+            min_cooking_time, quick_threshold, medium_threshold,
+            max_cooking_time
+        ]
+
+    def get_recipe_count(self, min_cooking_time, max_cooking_time):
+        return Recipe.objects.filter(cooking_time__range=(
+            min_cooking_time, max_cooking_time
+        )).count()
 
 
 class HasRecipesFilter(admin.SimpleListFilter):
@@ -95,31 +95,18 @@ class HasRecipesFilter(admin.SimpleListFilter):
         )
 
 
-class RecipeIngredientInline(admin.TabularInline):
+class RecipeIngredientInline(admin.StackedInline):
     model = RecipeIngredient
     extra = 0
-    fields = ('ingredient', 'amount', 'get_measurement_unit')
-    readonly_fields = ('get_measurement_unit',)
-
-    @admin.display(description='Продукты')
-    @mark_safe
-    def get_ingredients(self, recipe):
-        return '<br>'.join((
-            f'{recipe.ingredient.name} ( '
-            f'{recipe.ingredient.measurement_unit}) {recipe.amount} '
-            for recipe in recipe.recipeingredients.all())
-        )
-
-    @admin.display(description='Единица измерения')
-    def get_measurement_unit(self, recipeingredient):
-        return recipeingredient.ingredient.measurement_unit
+    fields = ('measurement_unit', 'ingredient', 'amount')
+    readonly_fields = ('measurement_unit',)
 
 
 class RecipeTagInline(admin.TabularInline):
     model = Recipe.tags.through
     extra = 0
-    verbose_name = "Тэг"
-    verbose_name_plural = "Тэги"
+    verbose_name = 'Тэг'
+    verbose_name_plural = 'Тэги'
 
 
 class FavoriteInline(admin.TabularInline):
@@ -136,7 +123,7 @@ class RecipeAdmin(admin.ModelAdmin):
         'get_tags',
         'get_ingredients',
         'thumbnail',
-        'cooking_time'
+        'cooking_time',
     )
     search_fields = (
         'author__username',
@@ -214,8 +201,8 @@ class IngredientAdmin(admin.ModelAdmin):
         count = ingredient.recipes.count()
         if count > 0:
             return (
-                f'<a href="/admin/recipes/recipe/'
-                f'?ingredients={ingredient.id}">{count}</a>'
+                f'<a href="{reverse("admin:recipes_recipe_changelist")}'
+                f'?ingredients__id__exact={ingredient.id}">{count}</a>'
             )
         return 0
 
@@ -235,8 +222,8 @@ class TagAdmin(admin.ModelAdmin):
         count = tag.recipes.count()
         if count > 0:
             return (
-                f'<a href="/admin/recipes/recipe/'
-                f'?tags={tag.id}">{count}</a>'
+                f'<a href="{reverse("admin:recipes_recipe_changelist")}'
+                f'?tags__id__exact={tag.id}">{count}</a>'
             )
         return 0
 
@@ -254,7 +241,7 @@ class FavoriteAdmin(admin.ModelAdmin):
     @mark_safe
     def get_recipe_link(self, favorite):
         return (
-            '<a href="/admin/recipes/recipe/'
+            f'<a href="{reverse("admin:recipes_recipe_changelist")}'
             f'?id={favorite.recipe.id}">'
             f'{favorite.recipe.name}</a>'
         )
@@ -268,7 +255,7 @@ class ShoppingCartAdmin(admin.ModelAdmin):
     @mark_safe
     def get_recipe_link(self, shopping_cart):
         return (
-            '<a href="/admin/recipes/recipe/'
+            f'<a href="{reverse("admin:recipes_recipe_changelist")}'
             f'?id={shopping_cart.recipe.id}">'
             f'{shopping_cart.recipe.name}</a>'
         )
@@ -394,7 +381,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
     @mark_safe
     def get_author_link(self, subscription):
         return (
-            '<a href="/admin/recipes/user/'
+            f'<a href="{reverse("admin:recipes_user_changelist")}'
             f'?id={subscription.author.id}">'
             f'{subscription.author.username}</a>'
         )
