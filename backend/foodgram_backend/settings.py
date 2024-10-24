@@ -9,8 +9,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'default_key')
 
-# DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
-DEBUG = True
+DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
+
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost').split(', ')
 HOME_DOMAIN = os.environ.get('HOME_DOMAIN', 'localhost'),
@@ -31,7 +31,6 @@ INSTALLED_APPS = [
     'djoser',
     'django_filters',
     'corsheaders',
-    'nested_inline',
     'api.apps.ApiConfig',
     'recipes.apps.RecipesConfig',
 ]
