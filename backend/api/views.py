@@ -205,39 +205,39 @@ class RecipeViewSet(viewsets.ModelViewSet):
             content_type='text/plain; charset=utf-8'
         )
 
+    @staticmethod
+    def manage_user_recipe_relation(request, pk, model):
+        user = request.user
+        recipe = get_object_or_404(Recipe, pk=pk)
+        if request.method == 'POST':
+            _, created = model.objects.get_or_create(user=user, recipe=recipe)
+            if not created:
+                raise ValueError(
+                    f'Ошибка добавления рецепта {recipe.name} для пользователя'
+                    f' {user.username}. Рецепт уже был добавлен'
+                )
+            return Response(
+                RecipeMiniSerializer(recipe).data,
+                status=status.HTTP_201_CREATED
+            )
+        get_object_or_404(model, user=user, recipe=recipe).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(
+        detail=True,
+        methods=['POST', 'DELETE'],
+        url_path='shopping_cart',
+        permission_classes=(IsAuthenticated,)
+    )
+    def shopping_cart(self, request, pk=None):
+        return self.manage_user_recipe_relation(request, pk, ShoppingCart)
+
     @action(
         detail=True,
         methods=['POST', 'DELETE'],
         url_path='favorite',
         permission_classes=(IsAuthenticated,)
+
     )
     def favorite(self, request, pk=None):
-        return self.handle_add_remove_recipes(request, pk, Favorite)
-
-    @action(
-        detail=True,
-        methods=('POST', 'DELETE',),
-        url_path='shopping_cart',
-        permission_classes=(IsAuthenticated,)
-    )
-    def add_shopping_item(self, request, pk=None):
-        return self.handle_add_remove_recipes(request, pk, ShoppingCart)
-
-    def handle_add_remove_recipes(self, request, pk, model):
-        get_object_or_404(model, pk=pk)
-        if request.method == 'POST':
-            return self.add_recipe(RecipeMiniSerializer, request, pk)
-        return self.remove_recipe(request, model, pk)
-
-    @staticmethod
-    def add_recipe(serializer, request, pk):
-        data = {'user_id': request.user.id, 'recipe_id': pk}
-        serializer = serializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    @staticmethod
-    def remove_recipe(request, model, pk):
-        get_object_or_404(model, pk=pk).delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return self.manage_user_recipe_relation(request, pk, Favorite)
