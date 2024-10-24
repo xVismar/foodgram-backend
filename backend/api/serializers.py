@@ -43,10 +43,7 @@ class CurentUserSerializer(UserSerializer):
 
     class Meta(UserSerializer.Meta):
         model = User
-        fields = (
-            'id', 'username', 'first_name', 'last_name', 'email',
-            'is_subscribed', 'avatar'
-        )
+        fields = (*UserSerializer.Meta.fields, 'is_subscribed', 'avatar')
 
     def get_is_subscribed(self, author):
         request = self.context.get('request')
@@ -174,18 +171,26 @@ class RecipeSerializer(serializers.ModelSerializer):
             'tags': TagSerializer(instance.tags.all(), many=True).data
         }
 
-    def check_relation(self, recipe, model):
+    def check_relation(self, user, recipe, model):
         request = self.context.get('request')
         return (
-            model.objects.filter(user=request.user, recipe=recipe).exists()
-            if request.user.is_authenticated else False
+            request.user.is_authenticated
+            and model.objects.filter(user=user, recipe=recipe).exists()
         )
 
     def get_is_favorited(self, recipe):
-        return self.check_relation(recipe, Favorite)
+        return (
+            self.check_relation(
+                self.context.get('request').user, recipe, Favorite
+            )
+        )
 
     def get_is_in_shopping_cart(self, recipe):
-        return self.check_relation(recipe, ShoppingCart)
+        return (
+            self.check_relation(
+                self.context.get('request').user, recipe, ShoppingCart
+            )
+        )
 
 
 class RecipeMiniSerializer(serializers.ModelSerializer):
