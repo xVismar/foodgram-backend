@@ -18,7 +18,9 @@ from api.serializers import (
     RecipeSerializer, SubscriptionSerializer, TagSerializer
 )
 from api.services import shopping_cart_list
-from recipes.models import Ingredient, Recipe, ShoppingCart, Subscription, Tag
+from recipes.models import (
+    Favorite, Ingredient, Recipe, ShoppingCart, Subscription, Tag
+)
 
 User = get_user_model()
 
@@ -33,6 +35,16 @@ class CurentUserViewSet(UserViewSet):
         if self.action == 'me':
             return (IsAuthenticated(),)
         return super().get_permissions()
+
+    @action(
+        detail=False,
+        methods=['GET'],
+        url_path='me',
+    )
+    def me(self, request):
+        user = request.user
+        serializer = CurentUserSerializer(user)
+        return Response(serializer.data)
 
     @action(
         detail=False,
@@ -144,6 +156,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         queryset = super().get_queryset()
         tags = self.request.query_params.getlist('tags')
         author = self.request.query_params.get('author')
+        favorite = self.request.query_params.get('favorites')
         user = self.request.user
         if user.is_authenticated:
             queryset = queryset.annotate(
@@ -156,6 +169,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(tags__slug__in=tags).distinct()
         if author:
             queryset = queryset.filter(author__id=author)
+        if favorite:
+            queryset = queryset.filter(favorites__user=user)
         return queryset.order_by('-created_at')
 
     def perform_create(self, serializer):
@@ -195,16 +210,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     )
     def favorite(self, request, pk=None):
-        page = self.paginate_queryset(request.user.favorites.all())
-        serializer = RecipeMiniSerializer(
-            page or request.user.favorites.all(),
-            many=True,
-            context={'request': request}
-        )
-        return (
-            self.get_paginated_response(serializer.data) if page is not None
-            else Response(serializer.data)
-        )
+        return self.manage_user_recipe_relation(request, pk, Favorite)
 
     @action(
         detail=True,

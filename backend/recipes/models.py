@@ -168,7 +168,7 @@ class Recipe(models.Model):
                 )
             )
         ],
-        verbose_name='Время готовки (мин)'
+        verbose_name='Готовить (мин)'
     )
     created_at = models.DateTimeField(
         auto_now_add=True,
@@ -218,11 +218,12 @@ class RecipeIngredient(models.Model):
         verbose_name = 'Продукт в рецепте'
         verbose_name_plural = 'Продукты в рецепте'
 
+    @property
+    def measurement_unit(self):
+        return self.ingredient.measurement_unit
+
     def __str__(self):
-        return (
-            f'{self.ingredient.name} {self.ingredient.measurement_unit} в '
-            f'{self.recipe.name}'
-        )
+        return f'{self.ingredient.measurement_unit}'
 
 
 class UserRecipeBaseModel(models.Model):

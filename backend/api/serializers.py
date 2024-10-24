@@ -28,8 +28,9 @@ class IngredientsSerializer(serializers.ModelSerializer):
 class RecipeIngredientSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='ingredient.id')
     name = serializers.ReadOnlyField(source='ingredient.name')
-    measurement_unit = serializers.ReadOnlyField(
-        source='ingredient.measurement_unit'
+    measurement_unit = serializers.CharField(
+        source='ingredient.measurement_unit',
+        read_only=True
     )
 
     class Meta:
@@ -43,22 +44,25 @@ class CurentUserSerializer(UserSerializer):
 
     class Meta(UserSerializer.Meta):
         model = User
-        fields = (*UserSerializer.Meta.fields, 'is_subscribed', 'avatar')
+        fields = (
+            'id', 'username', 'first_name', 'last_name', 'email',
+            'is_subscribed', 'avatar'
+        )
 
     def get_is_subscribed(self, author):
         request = self.context.get('request')
-        return (
-            request and request.user.is_authenticated
-            and Subscription.objects.filter(
+        if request and request.user.is_authenticated:
+            return Subscription.objects.filter(
                 user=request.user, author=author
             ).exists()
-        )
+        return False
 
     def update(self, instance, validated_data):
-        avatar = validated_data.pop('avatar', None)
+        avatar = validated_data.get('avatar', None)
         if avatar:
+            if instance.avatar:
+                instance.avatar.delete()
             instance.avatar = avatar
-            instance.save()
         return super().update(instance, validated_data)
 
 
@@ -145,7 +149,7 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def create(self, validated_data):
-        ingredients_data = validated_data.pop('recipeingredients')
+        ingredients_data = validated_data.pop('recipeingredient_set')
         tags_data = validated_data.pop('tags')
         image_data = validated_data.pop('image')
         recipe = Recipe.objects.create(**validated_data)
@@ -171,25 +175,22 @@ class RecipeSerializer(serializers.ModelSerializer):
             'tags': TagSerializer(instance.tags.all(), many=True).data
         }
 
-    def check_relation(self, user, recipe, model):
+    def get_is_favorited(self, recipe):
         request = self.context.get('request')
         return (
-            (request and request.user.is_authenticated)
-            and model.objects.filter(user=request.user, recipe=recipe).exists()
-        )
-
-    def get_is_favorited(self, recipe):
-        return (
-            self.check_relation(
-                self.context.get('request').user, recipe, Favorite
-            )
+            Favorite.objects.filter(
+                user=request.user, recipe=recipe
+            ).exists() if request and request.user.is_authenticated
+            else False
         )
 
     def get_is_in_shopping_cart(self, recipe):
+        request = self.context.get('request')
         return (
-            self.check_relation(
-                self.context.get('request').user, recipe, ShoppingCart
-            )
+            ShoppingCart.objects.filter(
+                user=request.user, recipe=recipe
+            ).exists() if request and request.user.is_authenticated
+            else False
         )
 
 
