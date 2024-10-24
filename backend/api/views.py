@@ -179,35 +179,37 @@ class RecipeViewSet(viewsets.ModelViewSet):
     @staticmethod
     def manage_user_recipe_relation(request, pk, model):
         user = request.user
-        recipe = get_object_or_404(Recipe, pk=pk)
-        if request.method == 'DELETE':
-            get_object_or_404(model, user=user, recipe=recipe).delete()
+        recipe = get_object_or_404(Recipe, id=pk)
+        if request.method == 'POST':
+            if model.objects.filter(recipe=recipe, user=user).exists():
+                raise ValueError(
+                    f'Рецепт "{recipe.name}" уже был добавлен'
+                    f'в {model._meta.verbose_name_plural}.'
+                )
+            model.objects.create(recipe=recipe, user=user)
+            serializer = RecipeMiniSerializer(
+                recipe, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        elif request.method == 'DELETE':
+            get_object_or_404(model, recipe=recipe, user=user).delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
-        _, created = model.objects.get_or_create(user=user, recipe=recipe)
-        if not created:
-            raise ValueError(
-                f'Ошибка добавления рецепта {recipe.name} для пользователя '
-                f'{user.username}. Рецепт уже был добавлен'
-            )
-        serializer = RecipeMiniSerializer(recipe)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @action(
         detail=True,
         methods=['POST', 'DELETE'],
+        permission_classes=[IsAuthenticated],
         url_path='shopping_cart',
-        permission_classes=(IsAuthenticated,)
     )
-    def shopping_cart(self, request, pk=None):
+    def shopping_cart(self, request, pk):
         return self.manage_user_recipe_relation(request, pk, ShoppingCart)
 
     @action(
         detail=True,
         methods=['POST', 'DELETE'],
+        permission_classes=[IsAuthenticated],
         url_path='favorite',
-        permission_classes=(IsAuthenticated,)
     )
-    def favorite(self, request, pk=None):
+    def favorite(self, request, pk):
         return self.manage_user_recipe_relation(request, pk, Favorite)
 
     @action(

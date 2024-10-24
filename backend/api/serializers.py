@@ -172,26 +172,18 @@ class RecipeSerializer(serializers.ModelSerializer):
             'tags': TagSerializer(instance.tags.all(), many=True).data
         }
 
-    def check_relation(self, user, recipe, model):
+    def check_relation(self, recipe, model):
         request = self.context.get('request')
         return (
-            request.user.is_authenticated
-            and model.objects.filter(user=user, recipe=recipe).exists()
+            request and request.user.is_authenticated
+            and model.objects.filter(user=request.user, recipe=recipe).exists()
         )
 
     def get_is_favorited(self, recipe):
-        return (
-            self.check_relation(
-                self.context.get('request').user, recipe, Favorite
-            )
-        )
+        return self.check_relation(recipe, Favorite)
 
     def get_is_in_shopping_cart(self, recipe):
-        return (
-            self.check_relation(
-                self.context.get('request').user, recipe, ShoppingCart
-            )
-        )
+        return self.check_relation(recipe, ShoppingCart)
 
 
 class RecipeMiniSerializer(serializers.ModelSerializer):
