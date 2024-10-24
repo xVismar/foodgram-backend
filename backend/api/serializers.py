@@ -100,8 +100,8 @@ class RecipeSerializer(serializers.ModelSerializer):
         if not model_data:
             raise serializers.ValidationError(validation_message)
         id_set = set(
-            item.id if isinstance(item, model) else item['ingredient']['id']
-            for item in model_data
+            item.id if model == Tag or isinstance(item, Tag)
+            else item['ingredient']['id'] for item in model_data
         )
         not_found = [
             id for id in id_set if not model.objects.filter(id=id).exists()
@@ -146,7 +146,7 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def create(self, validated_data):
-        ingredients_data = validated_data.pop('recipeingredient_set')
+        ingredients_data = validated_data.pop('recipeingredients')
         tags_data = validated_data.pop('tags')
         image_data = validated_data.pop('image')
         recipe = Recipe.objects.create(**validated_data)
@@ -175,7 +175,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     def check_relation(self, recipe, model):
         request = self.context.get('request')
         return (
-            request and request.user.is_authenticated
+            request.user.is_authenticated
             and model.objects.filter(user=request.user, recipe=recipe).exists()
         )
 

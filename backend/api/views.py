@@ -176,42 +176,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
-    @staticmethod
-    def manage_user_recipe_relation(request, pk, model):
-        user = request.user
-        recipe = get_object_or_404(Recipe, id=pk)
-        if request.method == 'POST':
-            if model.objects.filter(recipe=recipe, user=user).exists():
-                raise ValueError(
-                    f'Рецепт "{recipe.name}" уже был добавлен'
-                    f'в {model._meta.verbose_name_plural}.'
-                )
-            model.objects.create(recipe=recipe, user=user)
-            serializer = RecipeMiniSerializer(
-                recipe, context={'request': request})
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        elif request.method == 'DELETE':
-            get_object_or_404(model, recipe=recipe, user=user).delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-
-    @action(
-        detail=True,
-        methods=['POST', 'DELETE'],
-        permission_classes=[IsAuthenticated],
-        url_path='shopping_cart',
-    )
-    def shopping_cart(self, request, pk):
-        return self.manage_user_recipe_relation(request, pk, ShoppingCart)
-
-    @action(
-        detail=True,
-        methods=['POST', 'DELETE'],
-        permission_classes=[IsAuthenticated],
-        url_path='favorite',
-    )
-    def favorite(self, request, pk):
-        return self.manage_user_recipe_relation(request, pk, Favorite)
-
     @action(
         detail=True,
         methods=['GET'],
@@ -250,3 +214,44 @@ class RecipeViewSet(viewsets.ModelViewSet):
             shopping_cart_list(cart, cart_recipes),
             content_type='text/plain; charset=utf-8'
         )
+
+    @staticmethod
+    def manage_user_recipe_relation(request, pk, model):
+        user = request.user
+        recipe = get_object_or_404(Recipe, id=pk)
+        if request.method == 'POST':
+            if model.objects.filter(recipe=recipe, user=user).exists():
+                raise ValueError(
+                    f'Рецепт "{recipe.name}" уже был добавлен'
+                    f'в {model._meta.verbose_name_plural}.'
+                )
+            _, created = model.objects.get_or_create(user=user, recipe=recipe)
+            if created:
+                serializer = RecipeMiniSerializer(
+                    recipe, context={'request': request}
+                )
+                return Response(
+                    serializer.data, status=status.HTTP_201_CREATED
+                )
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        elif request.method == 'DELETE':
+            get_object_or_404(model, recipe=recipe, user=user).delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(
+        detail=True,
+        methods=['POST', 'DELETE'],
+        permission_classes=(IsAuthenticated,),
+        url_path='shopping_cart',
+    )
+    def shopping_cart(self, request, pk):
+        return self.manage_user_recipe_relation(request, pk, ShoppingCart)
+
+    @action(
+        detail=True,
+        methods=['POST', 'DELETE'],
+        permission_classes=(IsAuthenticated,),
+        url_path='favorite',
+    )
+    def favorite(self, request, pk):
+        return self.manage_user_recipe_relation(request, pk, Favorite)
