@@ -206,22 +206,21 @@ class RecipeViewSet(viewsets.ModelViewSet):
         )
 
     @staticmethod
-    def manage_user_recipe_relation(request, pk, model):
+    def manage_user_recipe_wwrelation(request, pk, model):
         user = request.user
         recipe = get_object_or_404(Recipe, pk=pk)
-        if request.method == 'POST':
-            _, created = model.objects.get_or_create(user=user, recipe=recipe)
-            if not created:
-                raise ValueError(
-                    f'Ошибка добавления рецепта {recipe.name} для пользователя'
-                    f' {user.username}. Рецепт уже был добавлен'
-                )
-            return Response(
-                RecipeMiniSerializer(recipe).data,
-                status=status.HTTP_201_CREATED
+        if request.method == 'DELETE':
+            get_object_or_404(model, user=user, recipe=recipe).delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        _, created = model.objects.get_or_create(user=user, recipe=recipe)
+        if not created:
+            raise ValueError(
+                f'Ошибка добавления рецепта {recipe.name} для пользователя '
+                f'{user.username}. Рецепт уже был добавлен'
             )
-        get_object_or_404(model, user=user, recipe=recipe).delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            RecipeMiniSerializer(recipe).data, status=status.HTTP_201_CREATED
+        )
 
     @action(
         detail=True,
