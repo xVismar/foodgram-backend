@@ -189,15 +189,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 f'Ошибка добавления рецепта {recipe.name} для пользователя '
                 f'{user.username}. Рецепт уже был добавлен'
             )
-        return Response(
-            RecipeMiniSerializer(recipe).data, status=status.HTTP_201_CREATED
-        )
+        serializer = RecipeMiniSerializer(recipe)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @action(
         detail=True,
         methods=['POST', 'DELETE'],
         url_path='shopping_cart',
-        permission_classes=(IsAuthenticated,)
     )
     def shopping_cart(self, request, pk=None):
         return self.manage_user_recipe_relation(request, pk, ShoppingCart)
@@ -206,8 +204,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
         detail=True,
         methods=['POST', 'DELETE'],
         url_path='favorite',
-        permission_classes=(IsAuthenticated,)
-
     )
     def favorite(self, request, pk=None):
         return self.manage_user_recipe_relation(request, pk, Favorite)

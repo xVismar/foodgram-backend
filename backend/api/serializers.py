@@ -28,9 +28,8 @@ class IngredientsSerializer(serializers.ModelSerializer):
 class RecipeIngredientSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='ingredient.id')
     name = serializers.ReadOnlyField(source='ingredient.name')
-    measurement_unit = serializers.CharField(
-        source='ingredient.measurement_unit',
-        read_only=True
+    measurement_unit = serializers.ReadOnlyField(
+        source='ingredient.measurement_unit'
     )
 
     class Meta:
@@ -175,23 +174,18 @@ class RecipeSerializer(serializers.ModelSerializer):
             'tags': TagSerializer(instance.tags.all(), many=True).data
         }
 
-    def get_is_favorited(self, recipe):
+    def check_relation(self, recipe, model):
         request = self.context.get('request')
         return (
-            Favorite.objects.filter(
-                user=request.user, recipe=recipe
-            ).exists() if request and request.user.is_authenticated
-            else False
+            model.objects.filter(user=request.user, recipe=recipe).exists()
+            if request.user.is_authenticated else False
         )
 
+    def get_is_favorited(self, recipe):
+        return self.check_relation(recipe, Favorite)
+
     def get_is_in_shopping_cart(self, recipe):
-        request = self.context.get('request')
-        return (
-            ShoppingCart.objects.filter(
-                user=request.user, recipe=recipe
-            ).exists() if request and request.user.is_authenticated
-            else False
-        )
+        return self.check_relation(recipe, ShoppingCart)
 
 
 class RecipeMiniSerializer(serializers.ModelSerializer):
@@ -220,34 +214,3 @@ class SubscriptionSerializer(CurentUserSerializer):
 
     def get_recipes_count(self, user):
         return user.recipes.count()
-
-
-class BaseFavoriteAndShoppingCartSerialzier(serializers.ModelSerializer):
-    id = serializers.IntegerField(
-        source='recipe.id', read_only=True
-    )
-    name = serializers.CharField(
-        source='recipe.name', read_only=True
-    )
-    image = serializers.ImageField(
-        source='recipe.image', read_only=True
-    )
-    cooking_time = serializers.IntegerField(
-        source='recipe.cooking_time', read_only=True
-    )
-
-    class Meta:
-        abstract = True
-        fields = ('id', 'name', 'image', 'cooking_time')
-
-
-class ShoppingCartSerializer(BaseFavoriteAndShoppingCartSerialzier):
-
-    class Meta(BaseFavoriteAndShoppingCartSerialzier.Meta):
-        model = ShoppingCart
-
-
-class FavoriteSerializer(BaseFavoriteAndShoppingCartSerialzier):
-
-    class Meta(BaseFavoriteAndShoppingCartSerialzier.Meta):
-        model = Favorite

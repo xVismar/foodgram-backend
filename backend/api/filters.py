@@ -17,13 +17,13 @@ class RecipeFilter(FilterSet):
 
     def user_related_filter(self, recipes, name, value):
         user = self.request.user
-        if user.is_authenticated:
+        if user.is_authenticated and value:
             return recipes.filter(
                 shoppingcarts__user=user if name == 'is_in_shopping_cart'
                 else None,
                 favorites__user=user if name == 'is_favorited'
-                else None,
-            ).distinct()
+                else None
+            )
         return recipes
 
 
