@@ -42,6 +42,7 @@ class CurentUserSerializer(UserSerializer):
     avatar = Base64ImageField()
 
     class Meta(UserSerializer.Meta):
+        abstract = True
         model = User
         fields = (*UserSerializer.Meta.fields, 'is_subscribed', 'avatar')
 

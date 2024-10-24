@@ -77,6 +77,24 @@ class CookingTimeFilter(admin.SimpleListFilter):
         return queryset
 
 
+class HasRecipesFilter(admin.SimpleListFilter):
+    title = 'Рецепты'
+    parameter_name = 'Наличие рецептов'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('yes', 'Да'),
+            ('no', 'Нет'),
+        )
+
+    def queryset(self, request, queryset):
+        value = self.value()
+        return (
+            queryset.filter(recipes__isnull=False)
+            if value == 'yes' else queryset
+        )
+
+
 class RecipeIngredientInline(admin.TabularInline):
     model = RecipeIngredient
     extra = 0
@@ -230,12 +248,30 @@ class TagAdmin(admin.ModelAdmin):
 
 @admin.register(Favorite)
 class FavoriteAdmin(admin.ModelAdmin):
-    list_display = ('user', 'recipe')
+    list_display = ('user', 'get_recipe_link')
+
+    @admin.display(description='Рецепт')
+    @mark_safe
+    def get_recipe_link(self, favorite):
+        return (
+            '<a href="/admin/recipes/recipe/'
+            f'?id={favorite.recipe.id}">'
+            f'{favorite.recipe.name}</a>'
+        )
 
 
 @admin.register(ShoppingCart)
 class ShoppingCartAdmin(admin.ModelAdmin):
-    list_display = ('user', 'recipe')
+    list_display = ('user', 'get_recipe_link')
+
+    @admin.display(description='Рецепт')
+    @mark_safe
+    def get_recipe_link(self, shopping_cart):
+        return (
+            '<a href="/admin/recipes/recipe/'
+            f'?id={shopping_cart.recipe.id}">'
+            f'{shopping_cart.recipe.name}</a>'
+        )
 
 
 @admin.register(User)
@@ -251,6 +287,11 @@ class UserAdmin(UserAdmin):
         'number_of_subscribers',
         'number_of_favorites',
         'avatar_image'
+    )
+    list_filter = (
+        'is_staff',
+        'is_superuser',
+        HasRecipesFilter
     )
     search_fields = ('email', 'username')
     fieldsets = (
@@ -285,13 +326,12 @@ class UserAdmin(UserAdmin):
 
     def get_queryset(self, request):
         return (
-            super().get_queryset(request).filter(
-                recipes__isnull=False).distinct().annotate(
-                    is_staff_display=Case(
-                        When(is_staff=True, then=Value('Админ')),
-                        default=Value('Пользователь'),
-                        output_field=CharField()
-                    )
+            super().get_queryset(request).annotate(
+                is_staff_display=Case(
+                    When(is_staff=True, then=Value('Админ')),
+                    default=Value('Пользователь'),
+                    output_field=CharField()
+                )
             )
         )
 
@@ -348,4 +388,13 @@ class UserAdmin(UserAdmin):
 
 @admin.register(Subscription)
 class SubscriptionAdmin(admin.ModelAdmin):
-    list_display = ('user', 'author')
+    list_display = ('user', 'get_author_link')
+
+    @admin.display(description='Автор')
+    @mark_safe
+    def get_author_link(self, subscription):
+        return (
+            '<a href="/admin/recipes/user/'
+            f'?id={subscription.author.id}">'
+            f'{subscription.author.username}</a>'
+        )
