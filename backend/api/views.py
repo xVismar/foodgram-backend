@@ -205,43 +205,39 @@ class RecipeViewSet(viewsets.ModelViewSet):
             content_type='text/plain; charset=utf-8'
         )
 
-    @staticmethod
-    def manage_user_recipe_relation(request, pk, model):
-        user = request.user
-        recipe = get_object_or_404(Recipe, id=pk)
-        if request.method == 'POST':
-            _, created = model.objects.get_or_create(user=user, recipe=recipe)
-            if not created:
-                raise ValueError(
-                    f'Ошибка при добавлении рецепта "{recipe.name}"'
-                    f'в {model._meta.verbose_name_plural}.'
-                )
-            serializer = RecipeMiniSerializer(
-                recipe, context={'request': request}
-            )
-            RecipeViewSet.update_shopping_cart_field(recipe, user)
-            return Response(
-                serializer.data, status=status.HTTP_201_CREATED
-            )
-        elif request.method == 'DELETE':
-            get_object_or_404(model, recipe=recipe, user=user).delete()
-            RecipeViewSet.update_shopping_cart_field(recipe, user)
-            return Response(status=status.HTTP_204_NO_CONTENT)
-
-    @staticmethod
-    def update_shopping_cart_field(recipe, user):
-        ShoppingCart.objects.filter(user=user, recipe=recipe).update(
-            is_in_shopping_cart=True
-        )
-        ShoppingCart.objects.exclude(user=user, recipe=recipe).update(
-            is_in_shopping_cart=False
-        )
-
     @action(
         detail=True,
         methods=['POST', 'DELETE'],
-        permission_classes=(IsAuthenticated,),
         url_path='favorite',
+        permission_classes=(IsAuthenticated,)
     )
-    def favorite(self, request, pk):
-        return self.manage_user_recipe_relation(request, pk, Favorite)
+    def favorite(self, request, pk=None):
+        return self.handle_add_remove_recipes(request, pk, Favorite)
+
+    @action(
+        detail=True,
+        methods=('POST', 'DELETE',),
+        url_path='shopping_cart',
+        permission_classes=(IsAuthenticated,)
+    )
+    def add_shopping_item(self, request, pk=None):
+        return self.handle_add_remove_recipes(request, pk, ShoppingCart)
+
+    def handle_add_remove_recipes(self, request, pk, model):
+        get_object_or_404(model, pk=pk)
+        if request.method == 'POST':
+            return self.add_recipe(RecipeMiniSerializer, request, pk)
+        return self.remove_recipe(request, model, pk)
+
+    @staticmethod
+    def add_recipe(serializer, request, pk):
+        data = {'user_id': request.user.id, 'recipe_id': pk}
+        serializer = serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @staticmethod
+    def remove_recipe(request, model, pk):
+        get_object_or_404(model, pk=pk).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
