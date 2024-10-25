@@ -1,5 +1,7 @@
+
 from ast import literal_eval
 
+from django import forms
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import Group
@@ -8,8 +10,11 @@ from django.forms import CheckboxSelectMultiple
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
-from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
-                            ShoppingCart, Subscription, Tag, User)
+from recipes.models import (
+    Favorite, Ingredient, Recipe, RecipeIngredient, ShoppingCart, Subscription,
+    Tag, User
+)
+
 
 admin.site.unregister(Group)
 
@@ -27,35 +32,32 @@ def generate_link(model, description, filter, url_name, field_name):
     if count > 0:
         return (
             f'<a href="{reverse("admin:" + url_name)}'
-            f'?{filter}__id__exact={model.id}">',
-            f'{count} {description}</a>'
+            f'?{filter}__id__exact={model.id}">'
+            f'{count}</a>'
         )
-    return (0, '')
+    return 0
 
 
 class CookingTimeFilter(admin.SimpleListFilter):
-    title = 'Cooking Time'
+    title = 'Время готовки'
     parameter_name = 'cooking_time__range'
 
     def lookups(self, request, model_admin):
         thresholds = self.get_cooking_time_thresholds(Recipe)
         return [
             (
-                f'{min_time,max_time}', f'{min_time} - {max_time} ('
+                f'{(min_time, max_time)}', f'{min_time} - {max_time} ('
                 f'{self.get_recipe_count(min_time, max_time)})')
             for min_time, max_time in zip(thresholds[:-1], thresholds[1:])
         ]
 
     def queryset(self, request, queryset):
         if self.value():
-            if isinstance(self.value(), list) and all(isinstance(
-                time_range, str) for time_range in self.value()
-            ):
-                min_time, max_time = literal_eval(self.value())
-                return queryset.filter(
-                    cooking_time__gte=min_time, cooking_time__lte=max_time
-                )
-            return queryset
+            min_time, max_time = literal_eval(self.value())
+            return queryset.filter(
+                cooking_time__gte=min_time, cooking_time__lte=max_time
+            )
+        return queryset
 
     def get_cooking_time_thresholds(self, model):
         cooking_times = model.objects.values_list('cooking_time', flat=True)
@@ -95,13 +97,6 @@ class HasRecipesFilter(admin.SimpleListFilter):
         )
 
 
-class RecipeIngredientInline(admin.StackedInline):
-    model = RecipeIngredient
-    extra = 0
-    fields = ('measurement_unit', 'ingredient', 'amount')
-    readonly_fields = ('measurement_unit',)
-
-
 class RecipeTagInline(admin.TabularInline):
     model = Recipe.tags.through
     extra = 0
@@ -112,6 +107,41 @@ class RecipeTagInline(admin.TabularInline):
 class FavoriteInline(admin.TabularInline):
     model = Favorite
     extra = 0
+
+
+class RecipeIngredientInline(admin.TabularInline):
+    model = RecipeIngredient
+    extra = 0
+    verbose_name = 'Продукт'
+    verbose_name_plural = 'Продукты'
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'ingredient':
+            kwargs['queryset'] = Ingredient.objects.all().order_by('name')
+            kwargs['widget'] = forms.Select(
+                attrs={
+                    'style': 'width: 250px;',
+                }
+            )
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def formfield_for_dbfield(self, db_field, **kwargs):
+        if db_field.name == 'amount':
+            kwargs['widget'] = forms.TextInput(
+                attrs={
+                    'style': 'width: 100px;',
+                }
+            )
+        return super().formfield_for_dbfield(db_field, **kwargs)
+
+    def get_formset(self, request, obj=None, **kwargs):
+        formset = super().get_formset(request, obj, **kwargs)
+        to_label = formset.form.base_fields['ingredient']
+        to_label.label_from_instance = self.label_from_instance
+        return formset
+
+    def label_from_instance(self, obj):
+        return f'{obj.name} ({obj.measurement_unit})'
 
 
 @admin.register(Recipe)
@@ -128,7 +158,8 @@ class RecipeAdmin(admin.ModelAdmin):
     search_fields = (
         'author__username',
         'name',
-        'tags'
+        'tags',
+        'ingredients__name',
     )
     autocomplete_fields = ('author',)
     list_filter = (
@@ -161,6 +192,9 @@ class RecipeAdmin(admin.ModelAdmin):
         ManyToManyField: {'widget': CheckboxSelectMultiple},
     }
 
+    def lookup_allowed(self, key, value):
+        return True
+
     @admin.display(description='Продукты')
     @mark_safe
     def get_ingredients(self, recipe):
@@ -182,11 +216,12 @@ class RecipeAdmin(admin.ModelAdmin):
     @admin.display(description='Картинка')
     @mark_safe
     def thumbnail(self, recipe):
-        return (
-            '<img src="{0}" width="100px" height="100px" />'.format(
-                recipe.image.url
+        if recipe.image:
+            return (
+                '<img src="{0}" width="100px" height="100px" />'.format(
+                    recipe.image.url
+                )
             )
-        )
 
 
 @admin.register(Ingredient)
@@ -217,6 +252,9 @@ class TagAdmin(admin.ModelAdmin):
     list_display = ('name', 'slug', 'number_of_recipes')
     search_fields = ('name', 'slug')
     list_filter = ('name',)
+
+    def lookup_allowed(self, key, value):
+        return True
 
     def generate_tag_link(self, tag):
         count = tag.recipes.count()
@@ -317,7 +355,7 @@ class UserAdmin(UserAdmin):
                 is_staff_display=Case(
                     When(is_staff=True, then=Value('Админ')),
                     default=Value('Пользователь'),
-                    output_field=CharField()
+                    output_field=CharField(max_length=20)
                 )
             )
         )
@@ -326,14 +364,14 @@ class UserAdmin(UserAdmin):
     @admin.display(description='Подписки')
     def number_of_subscribers(self, user):
         return generate_link(
-            user, 'подписок', 'author', *link_data['Подписки']
+            user, '', 'author', *link_data['Подписки']
         )
 
     @mark_safe
     @admin.display(description='Подписан')
     def number_of_subscriptions(self, user):
         return generate_link(
-            user, 'подписан', 'author', *link_data['Подписан']
+            user, '', 'author', *link_data['Подписан']
         )
 
     @mark_safe
@@ -345,7 +383,7 @@ class UserAdmin(UserAdmin):
     @admin.display(description='Избранных')
     def number_of_favorites(self, user):
         return generate_link(
-            user, 'избранных', 'author', *link_data['Избранные рецепты']
+            user, '', 'author', *link_data['Избранные рецепты']
         )
 
     @admin.display(description='Штат')

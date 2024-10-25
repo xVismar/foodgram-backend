@@ -37,6 +37,15 @@ class CurentUserViewSet(UserViewSet):
             return (IsAuthenticated(),)
         return super().get_permissions()
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+        if user.is_authenticated:
+            queryset = queryset.annotate(
+                avatar=F('avatar') if F('avatar') else None
+            )
+        return queryset
+
     @action(
         detail=False,
         methods=['PUT', 'DELETE'],

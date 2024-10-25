@@ -218,15 +218,15 @@ class RecipeIngredient(models.Model):
         verbose_name = 'Продукт в рецепте'
         verbose_name_plural = 'Продукты в рецепте'
 
+    def __str__(self):
+        return (
+            f'{self.ingredient} ({self.ingredient.measurement_unit}) в '
+            f'рецепте [{self.recipe.name}]'
+        )
+
     @property
     def measurement_unit(self):
         return self.ingredient.measurement_unit
-
-    def __str__(self):
-        return (
-            f'{self.ingredient} ({self.ingredient.measurement_unit}) в'
-            f'рецепте [{self.recipe.name}]'
-        )
 
 
 class UserRecipeBaseModel(models.Model):
