@@ -15,7 +15,8 @@ from api.pagination import LimitPagePagination
 from api.permissions import IsAuthorOrReadOnly
 from api.serializers import (
     CurentUserSerializer, IngredientsSerializer, RecipeMiniSerializer,
-    RecipeSerializer, SubscriptionSerializer, TagSerializer
+    RecipeSerializer, SubscriptionSerializer, TagSerializer,
+    UserAvatarSerializer
 )
 from api.services import shopping_cart_list
 from recipes.models import (
@@ -43,23 +44,21 @@ class CurentUserViewSet(UserViewSet):
         url_path='me/avatar',
     )
     def avatar(self, request):
-        user = request.user
-        serializer = CurentUserSerializer(
-            user, data=request.data, partial=True
-        )
-        if request.method != 'DELETE':
-            if not request.data:
-                raise ValidationError('Запрос не может быть пустым.')
-        if request.method == 'DELETE':
-            if user.avatar:
-                user.avatar.delete()
-                return Response(status=status.HTTP_204_NO_CONTENT)
-            raise ValidationError('Аватар не найден или аватар по умолчанию.')
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(
-            {'avatar': user.avatar.url}, status=status.HTTP_200_OK
-        )
+        user = self.request.user
+        if request.method == 'PUT':
+            serializer = UserAvatarSerializer(
+                user, data=request.data, partial=True
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(
+                {'avatar': request.build_absolute_uri(user.avatar.url)},
+                status=status.HTTP_200_OK
+            )
+
+        self.request.user.avatar = None
+        self.request.user.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         detail=True,
@@ -206,7 +205,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         )
 
     @staticmethod
-    def manage_user_recipe_wwrelation(request, pk, model):
+    def manage_user_recipe_relation(request, pk, model):
         user = request.user
         recipe = get_object_or_404(Recipe, pk=pk)
         if request.method == 'DELETE':

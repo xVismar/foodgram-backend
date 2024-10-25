@@ -1,4 +1,5 @@
 from collections import Counter
+from django.core.exceptions import ValidationError
 
 from django.db import transaction
 from djoser.serializers import UserSerializer
@@ -37,9 +38,29 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'measurement_unit', 'amount')
 
 
+class UserAvatarSerializer(UserSerializer):
+    avatar = Base64ImageField(required=False, allow_null=True)
+
+    class Meta:
+        model = User
+        fields = ('avatar',)
+
+    def validate(self, data):
+        avatar = data.get('avatar')
+        if avatar:
+            if not avatar.name.lower().endswith(('.png', '.jpg', '.jpeg')):
+                raise ValidationError(
+                    'Неверный формат картинки - разрешены только JPG и PNG'
+                )
+            max_size = 5 * 1024 * 1024
+            if avatar.size > max_size:
+                raise ValidationError('Размер картинки превышает 5мб')
+        return data
+
+
 class CurentUserSerializer(UserSerializer):
     is_subscribed = serializers.SerializerMethodField()
-    avatar = Base64ImageField()
+    avatar = UserAvatarSerializer()
 
     class Meta(UserSerializer.Meta):
         abstract = True
@@ -53,14 +74,6 @@ class CurentUserSerializer(UserSerializer):
                 user=request.user, author=author
             ).exists()
         return False
-
-    def update(self, instance, validated_data):
-        avatar = validated_data.get('avatar', None)
-        if avatar:
-            if instance.avatar:
-                instance.avatar.delete()
-            instance.avatar = avatar
-        return super().update(instance, validated_data)
 
 
 class RecipeSerializer(serializers.ModelSerializer):
@@ -98,7 +111,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         self, model_data, field_name, model, validation_message
     ):
         if not model_data:
-            raise serializers.ValidationError(validation_message)
+            raise ValidationError(validation_message)
         id_set = set(
             item.id if model == Tag or isinstance(item, Tag)
             else item['ingredient']['id'] for item in model_data
@@ -115,7 +128,7 @@ class RecipeSerializer(serializers.ModelSerializer):
                 f'Обнаружены дублированные {field_name}s с ID: {duplicates}.'
             )
         if errors:
-            raise serializers.ValidationError(errors)
+            raise ValidationError(errors)
         return model_data
 
     def validate_ingredients(self, ingredients_data):

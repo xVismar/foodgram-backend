@@ -1,31 +1,36 @@
 from django_filters.rest_framework import BooleanFilter, FilterSet, CharFilter
+from django.contrib.auth.models import AnonymousUser
 
 from recipes.models import Recipe, Ingredient
 
 
 class RecipeFilter(FilterSet):
     is_in_shopping_cart = BooleanFilter(
-        method='user_related_filter',
-
+        method='filter_is_in_shopping_cart',
     )
     is_favorited = BooleanFilter(
-        method='user_related_filter',
+        method='filter_is_favorited',
     )
+
+    def filter_is_in_shopping_cart(self, queryset, name, value):
+        if value and not isinstance(self.request.user, AnonymousUser):
+            return (
+                queryset.filter(shoppingcarts__user=self.request.user)
+                if value else queryset
+            )
+        return queryset
+
+    def filter_is_favorited(self, queryset, name, value):
+        if value and not isinstance(self.request.user, AnonymousUser):
+            return (
+                queryset.filter(favorites__user=self.request.user)
+                if value else queryset
+            )
+        return queryset
 
     class Meta:
         model = Recipe
         fields = ('is_in_shopping_cart', 'is_favorited')
-
-    def user_related_filter(self, recipes, name, value):
-        user = self.request.user
-        if user.is_authenticated:
-            return recipes.filter(
-                shoppingcarts__user=user if name == 'is_in_shopping_cart'
-                else None,
-                favorites__user=user if name == 'is_favorited'
-                else None
-            ).distinct()
-        return recipes
 
 
 class IngredientFilter(FilterSet):
