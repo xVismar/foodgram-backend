@@ -9,19 +9,15 @@ const UpdateAvatar = ({
   onAvatarChange
 }) => {
   const userContext = useContext(UserContext)
-  const history = useHistory()
+  
   const [ avatarFile, setAvatarFile ] = useState(userContext.avatar || null)
   const [ updated, setUpdated ] = useState(false)
 
   const checkIfDisabled = () => {
     return avatarFile === '' ||
-    avatarFile === null ||
+    avatarFile === null || 
     !updated
   }
-
-  useEffect(() => {
-    setAvatarFile(userContext.avatar || null);
-  }, [userContext.avatar]);
 
   return <Main withBG asFlex>
     <Container className={styles.center}>

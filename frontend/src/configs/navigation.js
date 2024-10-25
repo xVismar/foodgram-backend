@@ -1,3 +1,5 @@
+import Icons from "../components/icons"
+
 export default [
   {
     title: 'Рецепты',
@@ -22,6 +24,7 @@ export const UserMenu = [
     auth: true,
     icon: <Icons.SavedMenu />
   }, {
+    
     title: 'Сменить пароль',
     href: '/change-password',
     auth: true,
