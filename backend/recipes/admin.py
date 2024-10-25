@@ -1,11 +1,9 @@
-
-from ast import literal_eval
-
+import numpy as np
 from django import forms
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import Group
-from django.db.models import Avg, Case, CharField, ManyToManyField, Value, When
+from django.db.models import Case, CharField, ManyToManyField, Value, When
 from django.forms import CheckboxSelectMultiple
 from django.urls import reverse
 from django.utils.safestring import mark_safe
@@ -27,7 +25,7 @@ link_data = {
 }
 
 
-def generate_link(model, description, filter, url_name, field_name):
+def generate_link(model, filter, url_name, field_name):
     count = getattr(model, field_name).count()
     if count > 0:
         return (
@@ -40,43 +38,40 @@ def generate_link(model, description, filter, url_name, field_name):
 
 class CookingTimeFilter(admin.SimpleListFilter):
     title = 'Время готовки'
-    parameter_name = 'cooking_time__range'
+    parameter_name = 'cooking_time'
+
+    def _filter(self, min_time, max_time, object_to_filter):
+        return (
+            object_to_filter if not self.value()
+            else object_to_filter.filter(
+                cooking_time__range=(min_time, max_time)
+            )
+        )
 
     def lookups(self, request, model_admin):
-        thresholds = self.get_cooking_time_thresholds(Recipe)
+        cooking_times = model_admin.model.objects.values_list(
+            'cooking_time', flat=True
+        )
+        if not cooking_times:
+            return []
+        min_cooking_time = min(cooking_times)
+        max_cooking_time = max(cooking_times)
+        edges = np.linspace(
+            min_cooking_time, max_cooking_time, 4, dtype=int
+        )
         return [
             (
-                f'{(min_time, max_time)}', f'{min_time} - {max_time} ('
-                f'{self.get_recipe_count(min_time, max_time)})')
-            for min_time, max_time in zip(thresholds[:-1], thresholds[1:])
+                (edges[i], edges[i + 1]),
+                f'{edges[i]} - {edges[i + 1]} ( '
+                f'{self._filter(edges[i], edges[i+1], Recipe.objects).count()}'
+                ')'
+            )
+            for i in range(len(edges) - 1)
         ]
 
     def queryset(self, request, queryset):
-        if self.value():
-            min_time, max_time = literal_eval(self.value())
-            return queryset.filter(
-                cooking_time__gte=min_time, cooking_time__lte=max_time
-            )
-        return queryset
-
-    def get_cooking_time_thresholds(self, model):
-        cooking_times = model.objects.values_list('cooking_time', flat=True)
-        min_cooking_time = min(cooking_times)
-        max_cooking_time = max(cooking_times)
-        average_cooking_time = int(model.objects.all().aggregate(Avg(
-            'cooking_time'))['cooking_time__avg']
-        )
-        quick_threshold = average_cooking_time // 2
-        medium_threshold = (average_cooking_time + max_cooking_time) // 2
-        return [
-            min_cooking_time, quick_threshold, medium_threshold,
-            max_cooking_time
-        ]
-
-    def get_recipe_count(self, min_cooking_time, max_cooking_time):
-        return Recipe.objects.filter(cooking_time__range=(
-            min_cooking_time, max_cooking_time
-        )).count()
+        min_time, max_time = eval(self.value())
+        return self._filter(min_time, max_time, queryset)
 
 
 class HasRecipesFilter(admin.SimpleListFilter):
