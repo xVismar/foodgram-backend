@@ -70,8 +70,9 @@ class CookingTimeFilter(admin.SimpleListFilter):
         ]
 
     def queryset(self, request, queryset):
-        min_time, max_time = eval(self.value())
-        return self._filter(min_time, max_time, queryset)
+        if self.value():
+            min_time, max_time = eval(self.value())
+            return self._filter(min_time, max_time, queryset)
 
 
 class HasRecipesFilter(admin.SimpleListFilter):
@@ -361,26 +362,26 @@ class UserAdmin(UserAdmin):
     @admin.display(description='Подписки')
     def number_of_subscribers(self, user):
         return generate_link(
-            user, '', 'author', *link_data['Подписки']
+            user, 'author', *link_data['Подписки']
         )
 
     @mark_safe
     @admin.display(description='Подписан')
     def number_of_subscriptions(self, user):
         return generate_link(
-            user, '', 'author', *link_data['Подписан']
+            user, 'author', *link_data['Подписан']
         )
 
     @mark_safe
     @admin.display(description='Рецептов')
     def number_of_recipes(self, user):
-        return generate_link(user, '', 'author', *link_data['Рецепты'])
+        return generate_link(user, 'author', *link_data['Рецепты'])
 
     @mark_safe
     @admin.display(description='Избранных')
     def number_of_favorites(self, user):
         return generate_link(
-            user, '', 'author', *link_data['Избранные рецепты']
+            user, 'author', *link_data['Избранные рецепты']
         )
 
     @admin.display(description='Штат')
