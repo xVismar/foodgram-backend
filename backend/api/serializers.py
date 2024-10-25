@@ -1,6 +1,6 @@
 from collections import Counter
-from django.core.exceptions import ValidationError
 
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from djoser.serializers import UserSerializer
 from drf_extra_fields.fields import Base64ImageField
@@ -38,29 +38,9 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'measurement_unit', 'amount')
 
 
-class UserAvatarSerializer(UserSerializer):
-    avatar = Base64ImageField(required=False, allow_null=True)
-
-    class Meta:
-        model = User
-        fields = ('avatar',)
-
-    def validate(self, data):
-        avatar = data.get('avatar')
-        if avatar:
-            if not avatar.name.lower().endswith(('.png', '.jpg', '.jpeg')):
-                raise ValidationError(
-                    'Неверный формат картинки - разрешены только JPG и PNG'
-                )
-            max_size = 5 * 1024 * 1024
-            if avatar.size > max_size:
-                raise ValidationError('Размер картинки превышает 5мб')
-        return data
-
-
 class CurentUserSerializer(UserSerializer):
     is_subscribed = serializers.SerializerMethodField()
-    avatar = UserAvatarSerializer()
+    avatar = Base64ImageField()
 
     class Meta(UserSerializer.Meta):
         abstract = True
@@ -74,6 +54,12 @@ class CurentUserSerializer(UserSerializer):
                 user=request.user, author=author
             ).exists()
         return False
+
+    def update(self, instance, validated_data):
+        avatar = validated_data.pop('avatar', None)
+        if avatar:
+            instance.avatar.save(avatar.name, avatar, save=False)
+        return super().update(instance, validated_data)
 
 
 class RecipeSerializer(serializers.ModelSerializer):

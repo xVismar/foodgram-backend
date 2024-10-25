@@ -12,21 +12,21 @@ class RecipeFilter(FilterSet):
         method='filter_is_favorited',
     )
 
-    def filter_is_in_shopping_cart(self, queryset, name, value):
-        if value and not isinstance(self.request.user, AnonymousUser):
-            return (
-                queryset.filter(shoppingcarts__user=self.request.user)
-                if value else queryset
+    def filter_by_relation(self, queryset, name, value):
+        return (
+            queryset if not value or isinstance(
+                self.request.user, AnonymousUser
+            ) else (
+                queryset.filter(favorites__user=self.request.user) if name
+                else queryset.filter(shoppingcarts__user=self.request.user)
             )
-        return queryset
+        )
+
+    def filter_is_in_shopping_cart(self, queryset, name, value):
+        return self.filter_by_relation(queryset, None, value)
 
     def filter_is_favorited(self, queryset, name, value):
-        if value and not isinstance(self.request.user, AnonymousUser):
-            return (
-                queryset.filter(favorites__user=self.request.user)
-                if value else queryset
-            )
-        return queryset
+        return self.filter_by_relation(queryset, name, value)
 
     class Meta:
         model = Recipe
