@@ -37,14 +37,15 @@ class CurentUserViewSet(UserViewSet):
             return (IsAuthenticated(),)
         return super().get_permissions()
 
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        user = self.request.user
-        if user.is_authenticated:
-            queryset = queryset.annotate(
-                avatar=F('avatar') if F('avatar') else None
-            )
-        return queryset
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['user'] = self.request.user
+        if (
+            self.request.user.is_authenticated
+            and hasattr(self.request.user, 'avatar')
+        ):
+            context['user_avatar'] = self.request.user.avatar.url
+        return context
 
     @action(
         detail=False,
@@ -68,7 +69,8 @@ class CurentUserViewSet(UserViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(
-            {'avatar': user.avatar.url}, status=status.HTTP_200_OK
+            {'avatar': request.build_absolute_uri(user.avatar.url)},
+            status=status.HTTP_200_OK
         )
 
     @action(
@@ -115,10 +117,14 @@ class CurentUserViewSet(UserViewSet):
                 'recipes_limit': int(request.GET.get('recipes_limit', 10**10))
             },
         )
-        return (
+        response = (
             self.get_paginated_response(serializer.data) if page is not None
             else Response(serializer.data)
         )
+        response.data['user'] = request.user.username
+        if request.user.is_authenticated and hasattr(request.user, 'avatar'):
+            response.data['user_avatar'] = request.user.avatar.url
+        return response
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):

@@ -107,6 +107,8 @@ class RecipeTagInline(admin.TabularInline):
 class FavoriteInline(admin.TabularInline):
     model = Favorite
     extra = 0
+    verbose_name = 'Избранный рецепт'
+    verbose_name_plural = 'Избранные рецепты'
 
 
 class RecipeIngredientInline(admin.TabularInline):
