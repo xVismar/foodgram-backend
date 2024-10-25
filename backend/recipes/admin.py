@@ -319,15 +319,18 @@ class UserAdmin(UserAdmin):
     search_fields = ('email', 'username')
     fieldsets = (
         (None, {'fields': ('username', 'email', 'password')}),
-        ('Персональная информация', {'fields': ('first_name', 'last_name',
-                                                'avatar')}),
-        (
-            'Подписки и рецепты',
-            {'fields': ('get_subscriptions', 'get_recipes',
-                        'get_favorited_recipes')},
-        ),
+        ('Персональная информация', {'fields': (
+            'first_name', 'last_name', 'avatar'
+        )}),
+        ('Подписки и рецепты', {'fields': (
+            'number_of_subscriptions', 'number_of_recipes',
+            'number_of_favorites'
+        )}),
         ('Разрешения', {'fields': ('is_active', 'is_staff', 'is_superuser')}),
         ('Важные даты', {'fields': ('last_login', 'date_joined')}),
+    )
+    readonly_fields = (
+        'number_of_subscriptions', 'number_of_recipes', 'number_of_favorites'
     )
     add_fieldsets = (
         (

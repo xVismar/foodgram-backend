@@ -117,14 +117,10 @@ class CurentUserViewSet(UserViewSet):
                 'recipes_limit': int(request.GET.get('recipes_limit', 10**10))
             },
         )
-        response = (
+        return (
             self.get_paginated_response(serializer.data) if page is not None
             else Response(serializer.data)
         )
-        response.data['user'] = request.user.username
-        if request.user.is_authenticated and hasattr(request.user, 'avatar'):
-            response.data['user_avatar'] = request.user.avatar.url
-        return response
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
