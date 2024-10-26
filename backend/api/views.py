@@ -16,6 +16,7 @@ from api.permissions import IsAuthorOrReadOnly
 from api.serializers import (
     CurentUserSerializer, IngredientsSerializer, RecipeMiniSerializer,
     RecipeSerializer, SubscriptionSerializer, TagSerializer,
+    UserAvatarSerializer
 )
 from api.services import shopping_cart_list
 from recipes.models import (
@@ -48,17 +49,17 @@ class CurentUserViewSet(UserViewSet):
             raise ValidationError('Запрос не может быть пустым.')
         user = request.user
         if request.method == 'PUT':
-            serializer = CurentUserSerializer(
+            serializer = UserAvatarSerializer(
                 user, data=request.data, partial=True
 
             )
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(
-                {'avatar': request.build_absolute_uri(user.avatar.url)},
+                {'avatar': user.avatar.url},
                 status=status.HTTP_200_OK
             )
-        elif request.method == 'DELETE':
+        if request.method == 'DELETE':
             if not user.avatar:
                 raise ValidationError(
                     'Аватар не найден или аватар по умолчанию.'
@@ -88,7 +89,8 @@ class CurentUserViewSet(UserViewSet):
             author,
             context={
                 'request': request,
-                'recipes_limit': int(request.GET.get('recipes_limit', 10**10))
+                'recipes_limit': int(request.GET.get('recipes_limit', 10**10)),
+                'avatar': user.avatar.url
             }
         )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -107,7 +109,8 @@ class CurentUserViewSet(UserViewSet):
             many=True,
             context={
                 'request': request,
-                'recipes_limit': int(request.GET.get('recipes_limit', 10**10))
+                'recipes_limit': int(request.GET.get('recipes_limit', 10**10)),
+                'avatar': user.avatar.url
             },
         )
         return (

@@ -3,7 +3,7 @@ from collections import Counter
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from djoser.serializers import UserSerializer
-from drf_extra_fields.fields import Base64ImageField
+from api.fields import Base64ImageField
 from rest_framework import serializers
 
 from recipes.models import (
@@ -38,9 +38,30 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'measurement_unit', 'amount')
 
 
+class UserAvatarSerializer(serializers.ModelSerializer):
+    avatar = Base64ImageField()
+
+    class Meta:
+        model = User
+        fields = ('avatar',)
+
+    def validate(self, attrs):
+        request = self.context.get('request')
+        if request and 'avatar' not in attrs or attrs.get('avatar') is None:
+            raise serializers.ValidationError('Отсутствует поле "avatar"')
+        return super().validate(attrs)
+
+    def update(self, instance, validated_data):
+        avatar = validated_data.get('avatar', None)
+        if avatar:
+            if instance.avatar:
+                instance.avatar.delete()
+            instance.avatar = avatar
+        return super().update(instance, validated_data)
+
+
 class CurentUserSerializer(UserSerializer):
     is_subscribed = serializers.SerializerMethodField()
-    avatar = Base64ImageField()
 
     class Meta(UserSerializer.Meta):
         abstract = True
@@ -54,20 +75,6 @@ class CurentUserSerializer(UserSerializer):
                 user=request.user, author=author
             ).exists()
         return False
-
-    def validate(self, attrs):
-        request = self.context.get('request')
-        if request and 'avatar' not in attrs or attrs.get('avatar') is None:
-            raise serializers.ValidationError("Отсутствует поле 'avatar'")
-        return super().validate(attrs)
-
-    def update(self, instance, validated_data):
-        avatar = validated_data.get('avatar', None)
-        if avatar:
-            if instance.avatar:
-                instance.avatar.delete()
-            instance.avatar = avatar
-        return super().update(instance, validated_data)
 
 
 class RecipeSerializer(serializers.ModelSerializer):
