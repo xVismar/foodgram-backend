@@ -55,15 +55,18 @@ class CurentUserViewSet(UserViewSet):
     )
     def avatar(self, request):
         user = request.user
-        serializer = CurentUserSerializer(user, data=request.data,
-                                          partial=True)
+        serializer = CurentUserSerializer(
+            user,
+            data=request.data,
+            partial=True,
+            context={'request': request, 'avatar': user.avatar.url}
+        )
         if request.method == 'DELETE':
             if user.avatar:
                 user.avatar.delete(save=True)
                 return Response(status=status.HTTP_204_NO_CONTENT)
             return Response('Аватар не найден',
                             status=status.HTTP_404_NOT_FOUND)
-
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response({'avatar': user.avatar.url},
