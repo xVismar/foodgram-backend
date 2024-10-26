@@ -75,13 +75,7 @@ class Api {
         ...this._headers,
         authorization: `Token ${token}`,
       },
-    })
-    .then(response => response.json())
-    .then(data => {
-      userContext.setAvatar(data.avatar);
-      return data;
-    })
-    .catch(error => console.error(error));
+    }).then(this.checkResponse);
   }
 
   changePassword({ current_password, new_password }) {

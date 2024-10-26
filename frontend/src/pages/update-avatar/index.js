@@ -9,13 +9,13 @@ const UpdateAvatar = ({
   onAvatarChange
 }) => {
   const userContext = useContext(UserContext)
-
+  
   const [ avatarFile, setAvatarFile ] = useState(userContext.avatar || null)
   const [ updated, setUpdated ] = useState(false)
 
   const checkIfDisabled = () => {
     return avatarFile === '' ||
-    avatarFile === null ||
+    avatarFile === null || 
     !updated
   }
 
