@@ -1,26 +1,16 @@
 
-import base64
 from collections import Counter
 
-from django.core.files.base import ContentFile
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from djoser.serializers import UserSerializer
+from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 
 from recipes.models import (
     Favorite, Ingredient, Recipe, RecipeIngredient, ShoppingCart,
     Subscription, Tag, User
 )
-
-
-class Base64Image(serializers.ImageField):
-    def to_internal_value(self, data):
-        if isinstance(data, str) and data.startswith('data:image'):
-            format, imgstr = data.split(';base64,')
-            ext = format.split('/')[-1]
-            data = ContentFile(base64.b64decode(imgstr), name='temp.' + ext)
-        return super().to_internal_value(data)
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -51,13 +41,13 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
 
 class CurentUserSerializer(UserSerializer):
     is_subscribed = serializers.SerializerMethodField()
-    avatar = Base64Image()
+    avatar = Base64ImageField()
 
     class Meta(UserSerializer.Meta):
         abstract = True
         model = User
         fields = (
-            *UserSerializer.meta.fields, 'is_subscribed', 'avatar'
+            *UserSerializer.Meta.fields, 'is_subscribed', 'avatar'
         )
 
     def get_is_subscribed(self, author):
@@ -74,14 +64,6 @@ class CurentUserSerializer(UserSerializer):
             raise serializers.ValidationError('Отсутствует поле "avatar"')
         return super().validate(attrs)
 
-    def update(self, instance, validated_data):
-        avatar = validated_data.get('avatar', None)
-        if avatar:
-            if instance.avatar:
-                instance.avatar.delete()
-            instance.avatar = avatar
-        return super().update(instance, validated_data)
-
 
 class RecipeSerializer(serializers.ModelSerializer):
     tags = serializers.PrimaryKeyRelatedField(
@@ -97,7 +79,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     )
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
-    image = Base64Image()
+    image = Base64ImageField()
 
     class Meta:
         model = Recipe

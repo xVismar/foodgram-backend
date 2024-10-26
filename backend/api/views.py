@@ -39,31 +39,35 @@ class CurentUserViewSet(UserViewSet):
 
     @action(
         detail=False,
+        methods=['GET'],
+        url_path='me',
+    )
+    def me(self, request):
+        user = request.user
+        serializer = CurentUserSerializer(user)
+        return Response(serializer.data)
+
+    @action(
+        detail=False,
         methods=['PUT', 'DELETE'],
         permission_classes=(IsAuthenticated,),
         url_path='me/avatar',
     )
     def avatar(self, request):
-        if not request.data:
-            raise ValidationError('Запрос не может быть пустым.')
         user = request.user
-        if request.method == 'PUT':
-            serializer = CurentUserSerializer(
-                user, data=request.data, partial=True
-            )
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(
-                {'avatar': user.avatar.url},
-                status=status.HTTP_200_OK
-            )
+        serializer = CurentUserSerializer(user, data=request.data,
+                                          partial=True)
         if request.method == 'DELETE':
-            if not user.avatar:
-                raise ValidationError(
-                    'Аватар не найден или аватар по умолчанию.'
-                )
-        user.avatar.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+            if user.avatar:
+                user.avatar.delete(save=True)
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response('Аватар не найден',
+                            status=status.HTTP_404_NOT_FOUND)
+
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({'avatar': user.avatar.url},
+                        status=status.HTTP_200_OK)
 
     @action(
         detail=True,
