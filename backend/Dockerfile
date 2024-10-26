@@ -12,7 +12,6 @@ RUN apt-get install -y nano
 RUN mkdir -p data/media_data/recipes/
 
 COPY . .
-COPY data/media_data/recipes/ app/data/media_data/recipes/
 
 
 CMD ["sh", "entrypoint.sh"]
