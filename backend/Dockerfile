@@ -9,6 +9,7 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt --no-cache-dir
 RUN apt-get update
 RUN apt-get install -y nano
+RUN mkdir -p data/media_data/recipes/
 
 COPY . .
 COPY data/media_data/recipes/ app/data/media_data/recipes/
