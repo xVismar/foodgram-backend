@@ -27,12 +27,21 @@ const Account = ({ onSignOut, orders }) => {
   const [isChangeAvatarOpen, setIsChangeAvatarOpen] = useState(false);
   const [newAvatar, setNewAvatar] = useState("");
 
+  useEffect(() => {
+    api
+      .getUserData()
+      .then(({ avatar }) => {
+        userContext.setAvatar(avatar);
+      })
+      .catch((err) => console.log(err));
+  }, []);
+
   const handleSaveAvatar = () => {
     if (newAvatar) {
       api
         .changeAvatar({ file: newAvatar })
         .then(({ avatar }) => {
-          userContext.avatar = avatar;
+          userContext.setAvatar(avatar);
           setIsChangeAvatarOpen(false);
         })
         .catch((err) => console.log(err));
@@ -40,7 +49,7 @@ const Account = ({ onSignOut, orders }) => {
       api
         .deleteAvatar()
         .then(() => {
-          userContext.avatar = "";
+          userContext.setAvatar(undefined);
           setIsChangeAvatarOpen(false);
         })
         .catch((err) => console.log(err));

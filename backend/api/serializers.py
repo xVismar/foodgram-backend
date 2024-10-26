@@ -55,10 +55,18 @@ class CurentUserSerializer(UserSerializer):
             ).exists()
         return False
 
+    def validate(self, attrs):
+        request = self.context.get('request')
+        if request and 'avatar' not in attrs or attrs.get('avatar') is None:
+            raise serializers.ValidationError("Отсутствует поле 'avatar'")
+        return super().validate(attrs)
+
     def update(self, instance, validated_data):
         avatar = validated_data.get('avatar', None)
         if avatar:
-            instance.avatar.save(avatar.name, avatar, save=False)
+            if instance.avatar:
+                instance.avatar.delete()
+            instance.avatar = avatar
         return super().update(instance, validated_data)
 
 

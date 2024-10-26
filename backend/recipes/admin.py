@@ -37,15 +37,12 @@ def generate_link(model, filter, url_name, field_name):
 
 
 class CookingTimeFilter(admin.SimpleListFilter):
-    title = 'Время готовки'
+    title = 'Время готовки (мин)'
     parameter_name = 'cooking_time'
 
     def _filter(self, min_time, max_time, object_to_filter):
         return (
-            object_to_filter if not self.value()
-            else object_to_filter.filter(
-                cooking_time__range=(min_time, max_time)
-            )
+            object_to_filter.filter(cooking_time__range=(min_time, max_time))
         )
 
     def lookups(self, request, model_admin):
@@ -54,11 +51,11 @@ class CookingTimeFilter(admin.SimpleListFilter):
         )
         if not cooking_times:
             return []
-        min_cooking_time = min(cooking_times)
-        max_cooking_time = max(cooking_times)
         edges = np.linspace(
-            min_cooking_time, max_cooking_time, 4, dtype=int
+            min(cooking_times), max(cooking_times), 4, dtype=int
         )
+        if len(edges) < 4:
+            return []
         return [
             (
                 (edges[i], edges[i + 1]),
@@ -73,6 +70,7 @@ class CookingTimeFilter(admin.SimpleListFilter):
         if self.value():
             min_time, max_time = eval(self.value())
             return self._filter(min_time, max_time, queryset)
+        return queryset
 
 
 class HasRecipesFilter(admin.SimpleListFilter):

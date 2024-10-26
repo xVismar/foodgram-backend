@@ -37,16 +37,6 @@ class CurentUserViewSet(UserViewSet):
             return (IsAuthenticated(),)
         return super().get_permissions()
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['user'] = self.request.user
-        if (
-            self.request.user.is_authenticated
-            and hasattr(self.request.user, 'avatar')
-        ):
-            context['user_avatar'] = self.request.user.avatar.url
-        return context
-
     @action(
         detail=False,
         methods=['PUT', 'DELETE'],
@@ -54,24 +44,27 @@ class CurentUserViewSet(UserViewSet):
         url_path='me/avatar',
     )
     def avatar(self, request):
+        if not request.data:
+            raise ValidationError('Запрос не может быть пустым.')
         user = request.user
-        serializer = CurentUserSerializer(
-            user, data=request.data, partial=True
-        )
-        if request.method != 'DELETE':
-            if not request.data:
-                raise ValidationError('Запрос не может быть пустым.')
-        if request.method == 'DELETE':
-            if user.avatar:
-                user.avatar.delete()
-                return Response(status=status.HTTP_204_NO_CONTENT)
-            raise ValidationError('Аватар не найден или аватар по умолчанию.')
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(
-            {'avatar': request.build_absolute_uri(user.avatar.url)},
-            status=status.HTTP_200_OK
-        )
+        if request.method == 'PUT':
+            serializer = CurentUserSerializer(
+                user, data=request.data, partial=True
+
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(
+                {'avatar': request.build_absolute_uri(user.avatar.url)},
+                status=status.HTTP_200_OK
+            )
+        elif request.method == 'DELETE':
+            if not user.avatar:
+                raise ValidationError(
+                    'Аватар не найден или аватар по умолчанию.'
+                )
+        user.avatar.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         detail=True,

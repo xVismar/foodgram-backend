@@ -1,5 +1,5 @@
 import styles from "./styles.module.css";
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import { LinkComponent } from "../index.js";
 import { AuthContext, UserContext } from "../../contexts";
 import { UserMenu } from "../../configs/navigation";
@@ -36,12 +36,21 @@ const AccountMobile = ({ onSignOut }) => {
   const [isChangeAvatarOpen, setIsChangeAvatarOpen] = useState(false);
   const [newAvatar, setNewAvatar] = useState("");
 
+  useEffect(() => {
+    api
+      .getUserData()
+      .then(({ avatar }) => {
+        userContext.setAvatar(avatar);
+      })
+      .catch((err) => console.log(err));
+  }, []);
+
   const handleSaveAvatar = () => {
     if (newAvatar) {
       api
         .changeAvatar({ file: newAvatar })
         .then(({ avatar }) => {
-          userContext.avatar = avatar;
+          userContext.setAvatar(avatar);
           setIsChangeAvatarOpen(false);
         })
         .catch((err) => console.log(err));
@@ -49,7 +58,7 @@ const AccountMobile = ({ onSignOut }) => {
       api
         .deleteAvatar()
         .then(() => {
-          userContext.avatar = undefined;
+          userContext.setAvatar(undefined);
           setIsChangeAvatarOpen(false);
         })
         .catch((err) => console.log(err));
