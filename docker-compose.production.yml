@@ -22,7 +22,8 @@ services:
       - db
 
   frontend:
-    image: vismar/foodgram_frontend
+    # image: vismar/foodgram_frontend
+    image: elyablack/foodgram_frontend:latest
     env_file: .env
     command: cp -r /app/build/. /frontend_static/
     volumes:

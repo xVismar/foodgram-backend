@@ -57,13 +57,7 @@ class CurentUserSerializer(UserSerializer):
         abstract = True
         model = User
         fields = (
-            'id',
-            'username',
-            'first_name',
-            'last_name',
-            'email',
-            'is_subscribed',
-            'avatar'
+            *UserSerializer.meta.fields, 'is_subscribed', 'avatar'
         )
 
     def get_is_subscribed(self, author):
