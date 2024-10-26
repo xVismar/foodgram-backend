@@ -59,7 +59,6 @@ class CurentUserViewSet(UserViewSet):
             user,
             data=request.data,
             partial=True,
-            context={'request': request, 'avatar': user.avatar.url}
         )
         if request.method == 'DELETE':
             if user.avatar:
