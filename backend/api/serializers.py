@@ -1,15 +1,26 @@
+
+import base64
 from collections import Counter
 
+from django.core.files.base import ContentFile
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from djoser.serializers import UserSerializer
-from api.fields import Base64ImageField
 from rest_framework import serializers
 
 from recipes.models import (
     Favorite, Ingredient, Recipe, RecipeIngredient, ShoppingCart,
     Subscription, Tag, User
 )
+
+
+class Base64Image(serializers.ImageField):
+    def to_internal_value(self, data):
+        if isinstance(data, str) and data.startswith('data:image'):
+            format, imgstr = data.split(';base64,')
+            ext = format.split('/')[-1]
+            data = ContentFile(base64.b64decode(imgstr), name='temp.' + ext)
+        return super().to_internal_value(data)
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -38,12 +49,30 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'measurement_unit', 'amount')
 
 
-class UserAvatarSerializer(serializers.ModelSerializer):
-    avatar = Base64ImageField()
+class CurentUserSerializer(UserSerializer):
+    is_subscribed = serializers.SerializerMethodField()
+    avatar = Base64Image()
 
-    class Meta:
+    class Meta(UserSerializer.Meta):
+        abstract = True
         model = User
-        fields = ('avatar',)
+        fields = (
+            'id',
+            'username',
+            'first_name',
+            'last_name',
+            'email',
+            'is_subscribed',
+            'avatar'
+        )
+
+    def get_is_subscribed(self, author):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return Subscription.objects.filter(
+                user=request.user, author=author
+            ).exists()
+        return False
 
     def validate(self, attrs):
         request = self.context.get('request')
@@ -60,23 +89,6 @@ class UserAvatarSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
-class CurentUserSerializer(UserSerializer):
-    is_subscribed = serializers.SerializerMethodField()
-
-    class Meta(UserSerializer.Meta):
-        abstract = True
-        model = User
-        fields = (*UserSerializer.Meta.fields, 'is_subscribed', 'avatar')
-
-    def get_is_subscribed(self, author):
-        request = self.context.get('request')
-        if request and request.user.is_authenticated:
-            return Subscription.objects.filter(
-                user=request.user, author=author
-            ).exists()
-        return False
-
-
 class RecipeSerializer(serializers.ModelSerializer):
     tags = serializers.PrimaryKeyRelatedField(
         many=True,
@@ -91,7 +103,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     )
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
-    image = Base64ImageField()
+    image = Base64Image()
 
     class Meta:
         model = Recipe

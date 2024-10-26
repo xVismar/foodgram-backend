@@ -16,8 +16,8 @@ services:
     image: vismar/foodgram_backend
     env_file: .env
     volumes:
-      - static:/backend_static/
-      - media:/app/media/
+      - static:/backend_static
+      - media:/app/media
     depends_on:
       - db
 
@@ -31,8 +31,8 @@ services:
   gateway:
     image: vismar/foodgram_gateway
     volumes:
-      - static:/staticfiles/
-      - media:/media/
+      - static:/static
+      - media:/media
       - ./docs/:/usr/share/nginx/html/api/docs/
     ports:
       - 8080:80

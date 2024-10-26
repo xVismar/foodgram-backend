@@ -10,8 +10,7 @@ const UpdateAvatar = ({
 }) => {
   const userContext = useContext(UserContext)
 
-  const [ avatarFile, setAvatarFile ] = useState(userContext.avatar)
-  // const [ avatarFile, setAvatarFile ] = useState(userContext.avatar || null)
+  const [ avatarFile, setAvatarFile ] = useState(userContext.avatar || null)
   const [ updated, setUpdated ] = useState(false)
 
   const checkIfDisabled = () => {

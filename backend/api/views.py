@@ -15,8 +15,7 @@ from api.pagination import LimitPagePagination
 from api.permissions import IsAuthorOrReadOnly
 from api.serializers import (
     CurentUserSerializer, IngredientsSerializer, RecipeMiniSerializer,
-    RecipeSerializer, SubscriptionSerializer, TagSerializer,
-    UserAvatarSerializer
+    RecipeSerializer, SubscriptionSerializer, TagSerializer
 )
 from api.services import shopping_cart_list
 from recipes.models import (
@@ -49,9 +48,8 @@ class CurentUserViewSet(UserViewSet):
             raise ValidationError('Запрос не может быть пустым.')
         user = request.user
         if request.method == 'PUT':
-            serializer = UserAvatarSerializer(
+            serializer = CurentUserSerializer(
                 user, data=request.data, partial=True
-
             )
             serializer.is_valid(raise_exception=True)
             serializer.save()

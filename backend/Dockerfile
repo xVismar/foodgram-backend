@@ -11,5 +11,7 @@ RUN apt-get update
 RUN apt-get install -y nano
 
 COPY . .
+COPY data/media_data/recipes/ app/data/media_data/recipes/
+
 
 CMD ["sh", "entrypoint.sh"]
