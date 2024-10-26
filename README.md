@@ -172,6 +172,7 @@ python manage.py runserver
 </details>
 
 <br>
-# Авторы
-Frontend - [Команда Яндекс Практикума [yandex-praktikum]](https://github.com/yandex-praktikum)
-Backend - [Aлексеев Алексей (Vismar)](https://github.com/xVismar)         
+# Авторы    
+
+Frontend - [Команда Яндекс Практикума[yandex-prakticum]](https://github.com/yandex-praktikum)     
+Backend - [Aлексеев Алексей (Vismar)](https://github.com/xVismar)          
